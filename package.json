@@ -1,8 +1,8 @@
 {
-  "name": "xtract",
-  "displayName": "Xtract",
+  "name": "magic-fill",
+  "displayName": "Magic fill",
   "version": "0.0.1",
-  "description": "An extension to extract information from pages.",
+  "description": "An extension to magically fill online forms from files.",
   "author": "montezdesousa@gmail.com",
   "scripts": {
     "dev": "plasmo dev",
@@ -26,6 +26,18 @@
   "manifest": {
     "host_permissions": [
       "https://*/*"
-    ]
+    ],
+    "permissions": [
+      "contextMenus",
+      "activeTab",
+      "scripting",
+      "downloads"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": ["script.js"],
+        "matches": ["<all_urls>"]
+      }
+    ]    
   }
 }
