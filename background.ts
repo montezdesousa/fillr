@@ -7,13 +7,14 @@ enum Status {
   ERROR = "ERROR"
 }
 enum Action {
-  PROCESS_FILES = "PROCESS_FILES"
+  PROCESS_FILES = "PROCESS_FILES",
+  UPDATE_PROGRESS = "UPDATE_PROGRESS"
 }
 interface UserFile {
   name: string
   type: "image/jpeg" | "image/png"
   size: number // Size in bytes
-  data: { [key: number]: number }  // Chrome converts Uint8Array to an object when sending messages
+  data: { [key: number]: number } // Chrome converts Uint8Array to an object when sending messages
 }
 interface Schema {
   type: "object" | "array" | "string" | "number" | "boolean"
@@ -80,7 +81,11 @@ chrome.runtime.onMessage.addListener(
     console.log("✉️ Received message:", request)
     if (request.action === Action.PROCESS_FILES) {
       ;(async () => {
-        const res = await fillFormFromFiles(request.form, request.files)
+        const res = await fillFormFromFiles(
+          sender.tab.id,
+          request.form,
+          request.files
+        )
         sendResponse(res)
       })()
       // Return true to indicate we will call sendResponse asynchronously
@@ -89,7 +94,11 @@ chrome.runtime.onMessage.addListener(
   }
 )
 
-async function fillFormFromFiles(form: Schema, userFiles: UserFile[]) {
+async function fillFormFromFiles(
+  tabId: number,
+  form: Schema,
+  userFiles: UserFile[]
+) {
   if (!Object.keys(form).length || userFiles.length === 0)
     return {
       status: Status.ERROR,
@@ -97,10 +106,16 @@ async function fillFormFromFiles(form: Schema, userFiles: UserFile[]) {
     }
 
   try {
-    const files = await Promise.all(userFiles.map((f) => {
-      const uint8 = new Uint8Array(Object.values(f.data))
-      return new File([uint8], f.name, { type: f.type })
-    }))
+    chrome.tabs.sendMessage(tabId, {
+      action: Action.UPDATE_PROGRESS,
+      message: "Processing files..."
+    })
+    const files = await Promise.all(
+      userFiles.map((f) => {
+        const uint8 = new Uint8Array(Object.values(f.data))
+        return new File([uint8], f.name, { type: f.type })
+      })
+    )
 
     const SYSTEM_PROMPT = `You are a strict and careful data extraction tool.
     - Your only task is to extract values from the IMAGE.
@@ -116,6 +131,10 @@ async function fillFormFromFiles(form: Schema, userFiles: UserFile[]) {
     console.log(
       `🤖 AI session started. Sending ${files.length} files for processing...`
     )
+    chrome.tabs.sendMessage(tabId, {
+      action: Action.UPDATE_PROGRESS,
+      message: "Sending files to AI model..."
+    })
     const messages = files.map((file) => ({
       role: "user",
       content: [
@@ -125,7 +144,10 @@ async function fillFormFromFiles(form: Schema, userFiles: UserFile[]) {
     }))
     await session.append(messages)
     console.log(`🤖 Starting AI processing for ${messages.length} files...`)
-    // TODO: Send message to content script to show a loading indicator
+    chrome.tabs.sendMessage(tabId, {
+      action: Action.UPDATE_PROGRESS,
+      message: "AI model is processing the files..."
+    })
     const result = await session.prompt(
       "Proceed with the extraction of information.",
       {

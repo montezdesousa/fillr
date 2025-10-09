@@ -3,7 +3,9 @@
     console.log(`🖊️ Filling form with content: ${JSON.stringify(content)}`)
     let filledCount = 0
     Object.keys(form.properties).forEach((item) => {
-      const targetField = document.getElementById(item) || document.querySelector(`[name="${item}"]`)
+      const targetField =
+        document.getElementById(item) ||
+        document.querySelector(`[name="${item}"]`)
       if (!targetField) {
         console.log(`⚠️ Field not found in DOM: ${item}`)
         return
@@ -133,6 +135,57 @@
     }
   }
 
+  function showError(message) {
+    const OVERLAY_ID = "magic-fill-error-overlay"
+    const STYLE_ID = "magic-fill-error-styles"
+
+    // injetar estilos uma vez
+    if (!document.getElementById(STYLE_ID)) {
+      const style = document.createElement("style")
+      style.id = STYLE_ID
+      style.textContent = `
+#${OVERLAY_ID} {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  background: transparent;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+#magic-fill-error-box {
+  padding: 14px 18px;
+  background: #ff4d4f;
+  color: #fff;
+  border-radius: 10px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+  max-width: 400px;
+  text-align: center;
+}
+`
+      document.head.appendChild(style)
+    }
+
+    let overlay = document.getElementById(OVERLAY_ID)
+    if (!overlay) {
+      overlay = document.createElement("div")
+      overlay.id = OVERLAY_ID
+      overlay.innerHTML = `<div id="magic-fill-error-box">${message}</div>`
+      document.body.appendChild(overlay)
+    } else {
+      overlay.querySelector("#magic-fill-error-box").textContent = message
+      overlay.style.display = "flex"
+    }
+
+    setTimeout(() => {
+      if (overlay) overlay.style.display = "none"
+    }, 2000)
+  }
+
   function fileToArrayBuffer(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -157,15 +210,15 @@
         try {
           const files = await Promise.all(
             userFiles.map(async (file) => {
-              const buffer = await fileToArrayBuffer(file);
+              const buffer = await fileToArrayBuffer(file)
               return {
                 name: file.name,
                 type: file.type,
                 size: file.size,
                 data: Array.from(new Uint8Array(buffer))
-              };
+              }
             })
-          );
+          )
           const form = getFormSchema()
           const response = await chrome.runtime.sendMessage({
             action: "PROCESS_FILES",
@@ -180,6 +233,8 @@
               break
             case "ERROR":
               console.log("❌ AI processing error:", response.content)
+              toggleLoading(false)
+              showError(response.content || "AI processing error")
               break
             default:
               console.log("❌ Unexpected response:", response)
@@ -197,6 +252,12 @@
     document.body.appendChild(input)
     input.click()
   }
+
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === "UPDATE_PROGRESS") {
+      toggleLoading(true, msg.message)
+    }
+  })
 
   openFileExplorer()
 })()
