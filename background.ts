@@ -3,6 +3,7 @@ const CONTEXT_ITEM_PARENT_ID = "xport-context-item-parent"
 const CONTEXT_ITEM_ID_FILE = "xport-context-item-file"
 const CONTEXT_ITEM_ID_CAMERA = "xport-context-item-camera"
 const CONTEXT_ITEM_ID_CLIPBOARD = "xport-context-item-clipboard"
+const ABORT_MESSAGE = "Aborted by user"
 enum Action {
   START_PROCESSING = "START_PROCESSING",
   UPDATE_PROGRESS_MESSAGE = "UPDATE_PROGRESS_MESSAGE",
@@ -29,11 +30,15 @@ interface DoneMessage {
   action: Action.DONE
   content: { [key: string]: any }
 }
+interface CancelMessage {
+  action: Action.CANCEL
+}
 type Message =
   | StartProcessingMessage
   | UpdateProgressMessage
   | UpdateFieldStatusMessage
   | DoneMessage
+  | CancelMessage
 interface UserFile {
   name: string
   type: "image/jpeg" | "image/png"
@@ -102,18 +107,142 @@ chrome.runtime.onConnect.addListener((port) => {
   })
 })
 
+function sendMessage<Message>(port: chrome.runtime.Port, message: Message) {
+  console.log("➡️ Sending message to port:", message)
+  port.postMessage(message)
+}
+
+async function getFinalResult(
+  stream: AsyncIterable<string | object>,
+  form: Schema,
+  port: chrome.runtime.Port
+) {
+  let buffer = ""
+  const MAX_BUFFER = 8 * 1024 // keep last 8KB of stream to allow reassembly across chunks
+  const expectedFields = Object.keys(form.properties || {})
+  const reportedFields = new Map<string, boolean>()
+  let finalResult: { [k: string]: any } = {}
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+  for await (const chunk of stream) {
+    try {
+      const text = typeof chunk === "string" ? chunk : JSON.stringify(chunk)
+      buffer += text
+      // cap rolling buffer so it doesn't grow without bound but keeps recent context
+      if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
+
+      // quick scan: look for key:value pairs for expected fields in the
+      for (const k of expectedFields) {
+        // strict key:value detection (string/null/number) — report as soon as present
+        const keyRe = new RegExp(
+          `(?:"${escapeRegex(k)}"|'${escapeRegex(k)}'|\\b${escapeRegex(k)}\\b)\\s*:\\s*(?:"([^"]*)"|'([^']*)'|(null)|(true|false)|(-?\\d+(?:\\.\\d+)?))`,
+          "i"
+        )
+        const m = buffer.match(keyRe)
+        if (m) {
+          let val: any = null
+          if (m[1] !== undefined) val = m[1]
+          else if (m[2] !== undefined) val = m[2]
+          else if (m[3] !== undefined) val = null
+          else if (m[4] !== undefined) val = m[4].toLowerCase() === "true"
+          else if (m[5] !== undefined) {
+            const num = Number(m[5])
+            val = Number.isFinite(num) ? num : m[5]
+          }
+          const hasValue = val !== null && val !== "" && val !== undefined
+          const prev = reportedFields.get(k)
+          if (prev === undefined || prev !== hasValue) {
+            reportedFields.set(k, hasValue)
+            sendMessage<UpdateFieldStatusMessage>(port, {
+              action: Action.UPDATE_FIELD_STATUS,
+              content: { field: k, found: !!hasValue }
+            })
+          }
+          finalResult[k] = val
+        }
+      }
+
+      // fallback: try to extract a JSON substring from buffer
+      const first = buffer.indexOf("{")
+      const last = buffer.lastIndexOf("}")
+      if (first !== -1 && last !== -1 && last > first) {
+        const candidate = buffer.slice(first, last + 1)
+        try {
+          const parsed = JSON.parse(candidate)
+          // merge parsed into finalResult (shallow merge)
+          Object.keys(parsed).forEach((k) => {
+            const val = parsed[k]
+            // determine if field has a meaningful value
+            const hasValue = val !== null && val !== "" && val !== undefined
+            const prev = reportedFields.get(k)
+            // if field appears for the first time, report its state (true or false)
+            if (prev === undefined) {
+              reportedFields.set(k, hasValue)
+              sendMessage<UpdateFieldStatusMessage>(port, {
+                action: Action.UPDATE_FIELD_STATUS,
+                content: { field: k, found: !!hasValue }
+              })
+            } else if (!prev && hasValue) {
+              // previously reported as not found, now found -> update
+              reportedFields.set(k, true)
+              sendMessage<UpdateFieldStatusMessage>(port, {
+                action: Action.UPDATE_FIELD_STATUS,
+                content: { field: k, found: true }
+              })
+            }
+            finalResult[k] = val
+          })
+          // once parsed successfully, remove consumed portion but keep recent context
+          buffer = buffer.slice(last + 1)
+          if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
+        } catch (e) {
+          console.warn("⚠️ Could not parse JSON candidate:", e)
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Error handling chunk:", err)
+    }
+  }
+
+  try {
+    const first = buffer.indexOf("{")
+    const last = buffer.lastIndexOf("}")
+    if (first !== -1 && last !== -1 && last > first) {
+      const candidate = buffer.slice(first, last + 1)
+      const parsed = JSON.parse(candidate)
+      Object.keys(parsed).forEach((k) => {
+        const val = parsed[k]
+        const hasValue = val !== null && val !== "" && val !== undefined
+        const prev = reportedFields.get(k)
+        if (prev === undefined) {
+          reportedFields.set(k, hasValue)
+          sendMessage<UpdateFieldStatusMessage>(port, {
+            action: Action.UPDATE_FIELD_STATUS,
+            content: { field: k, found: !!hasValue }
+          })
+        } else if (!prev && hasValue) {
+          reportedFields.set(k, true)
+          sendMessage<UpdateFieldStatusMessage>(port, {
+            action: Action.UPDATE_FIELD_STATUS,
+            content: { field: k, found: true }
+          })
+        }
+        finalResult[k] = val
+      })
+    }
+  } catch (err) {
+    console.warn("⚠️ Could not parse final buffer:", err)
+  }
+
+  return finalResult
+}
+
 async function processFiles(
   port: chrome.runtime.Port,
   form: Schema,
   userFiles: UserFile[]
 ) {
-  const sendMessage = <Message>(
-    port: chrome.runtime.Port,
-    message: Message
-  ) => {
-    port.postMessage(message)
-  }
-
   if (!Object.keys(form).length || userFiles.length === 0)
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
@@ -150,7 +279,7 @@ async function processFiles(
     })
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
-      content: `AI model started. Sending ${files.length} file(s) for processing...`
+      content: `Sending ${files.length} file(s) for processing...`
     })
     const messages = files.map((file) => ({
       role: "user",
@@ -165,16 +294,11 @@ async function processFiles(
       content: "AI model is processing the files..."
     })
     const controller = new AbortController()
-    onPortMsg = (m: any) => {
+    onPortMsg = (message: Message) => {
       try {
-        if (m?.action === "CANCEL") {
-          console.log("🛑 Cancel requested via port")
+        if (message.action === Action.CANCEL) {
           try {
-            controller.abort()
-            sendMessage<UpdateProgressMessage>(port, {
-              action: Action.UPDATE_PROGRESS_MESSAGE,
-              content: "Processing canceled by user."
-            })
+            controller.abort(ABORT_MESSAGE)
           } catch (e) {
             console.warn("⚠️ Error aborting controller:", e)
           }
@@ -183,9 +307,8 @@ async function processFiles(
         console.warn("⚠️ Error in onPortMsg handler:", e)
       }
     }
-    if (port && port.onMessage && onPortMsg) {
-      port.onMessage.addListener(onPortMsg)
-    }
+    if (onPortMsg) port.onMessage.addListener(onPortMsg)
+
     const stream = await session.promptStreaming(
       "Proceed with the extraction of information.",
       {
@@ -193,163 +316,25 @@ async function processFiles(
         responseConstraint: form
       }
     )
-    // We'll accumulate the streaming chunks and attempt to parse the partial
-    // JSON that the model returns according to `form`. We'll also scan each
-    // incoming chunk for key:value patterns so we can report fields
-    // immediately when they appear in the stream.
-    let buffer = ""
-    const MAX_BUFFER = 8 * 1024 // keep last 8KB of stream to allow reassembly across chunks
-    const expectedFields = Object.keys(form.properties || {})
-    const reportedFields = new Map<string, boolean>()
-    let finalResult: { [k: string]: any } = {}
-
-    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
-    for await (const chunk of stream) {
-      try {
-        const text = typeof chunk === "string" ? chunk : JSON.stringify(chunk)
-        console.log("🤖 Received chunk:", text)
-        buffer += text
-        // cap rolling buffer so it doesn't grow without bound but keeps recent context
-        if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
-
-        // quick scan: look for key:value pairs for expected fields in the
-        // current buffer and report them immediately.
-        for (const k of expectedFields) {
-          // strict key:value detection (string/null/number) — report as soon as present
-          const keyRe = new RegExp(
-            `(?:"${escapeRegex(k)}"|'${escapeRegex(k)}'|\\b${escapeRegex(k)}\\b)\\s*:\\s*(?:"([^"]*)"|'([^']*)'|(null)|(true|false)|(-?\\d+(?:\\.\\d+)?))`,
-            "i"
-          )
-          const m = buffer.match(keyRe)
-          if (m) {
-            let val: any = null
-            if (m[1] !== undefined) val = m[1]
-            else if (m[2] !== undefined) val = m[2]
-            else if (m[3] !== undefined) val = null
-            else if (m[4] !== undefined) val = m[4].toLowerCase() === "true"
-            else if (m[5] !== undefined) {
-              const num = Number(m[5])
-              val = Number.isFinite(num) ? num : m[5]
-            }
-            const hasValue = val !== null && val !== "" && val !== undefined
-            const prev = reportedFields.get(k)
-            if (prev === undefined || prev !== hasValue) {
-              reportedFields.set(k, hasValue)
-              const matchIndex = buffer.indexOf(m[0])
-              const before = buffer.slice(
-                Math.max(0, matchIndex - 40),
-                matchIndex
-              )
-              const after = buffer.slice(
-                matchIndex + (m[0] || "").length,
-                matchIndex + (m[0] || "").length + 40
-              )
-              console.log(
-                `📣 Immediate field report: ${k} => ${hasValue ? "FOUND" : "EMPTY/NULL"} (match: ${m[0]})\n  ...${before}[MATCH]${after}...`
-              )
-              sendMessage<UpdateFieldStatusMessage>(port, {
-                action: Action.UPDATE_FIELD_STATUS,
-                content: { field: k, found: !!hasValue }
-              })
-            }
-            finalResult[k] = val
-          }
-        }
-
-        // TODO: Do we need both immediate key:value detection above AND full JSON parsing below?
-        // try to extract a JSON substring from buffer
-        // naive approach: find first `{` and last `}` and try to parse
-        const first = buffer.indexOf("{")
-        const last = buffer.lastIndexOf("}")
-        if (first !== -1 && last !== -1 && last > first) {
-          const candidate = buffer.slice(first, last + 1)
-          try {
-            const parsed = JSON.parse(candidate)
-            // merge parsed into finalResult (shallow merge)
-            Object.keys(parsed).forEach((k) => {
-              const val = parsed[k]
-              // determine if field has a meaningful value
-              const hasValue = val !== null && val !== "" && val !== undefined
-              const prev = reportedFields.get(k)
-              // if field appears for the first time, report its state (true or false)
-              if (prev === undefined) {
-                reportedFields.set(k, hasValue)
-                console.log(`🆕 Field found: ${k}`)
-                sendMessage<UpdateFieldStatusMessage>(port, {
-                  action: Action.UPDATE_FIELD_STATUS,
-                  content: { field: k, found: !!hasValue }
-                })
-              } else if (!prev && hasValue) {
-                // previously reported as not found, now found -> update
-                reportedFields.set(k, true)
-                console.log(`✅ Field now found: ${k}`)
-                sendMessage<UpdateFieldStatusMessage>(port, {
-                  action: Action.UPDATE_FIELD_STATUS,
-                  content: { field: k, found: true }
-                })
-              }
-              finalResult[k] = val
-            })
-            // once parsed successfully, remove consumed portion but keep recent context
-            buffer = buffer.slice(last + 1)
-            if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
-          } catch (e) {
-            // JSON still incomplete or invalid; keep buffering
-            // console.log('partial JSON, waiting for more data')
-          }
-        }
-      } catch (err) {
-        console.warn("⚠️ Error handling chunk:", err)
-      }
-    }
-
-    try {
-      const first = buffer.indexOf("{")
-      const last = buffer.lastIndexOf("}")
-      if (first !== -1 && last !== -1 && last > first) {
-        const candidate = buffer.slice(first, last + 1)
-        const parsed = JSON.parse(candidate)
-        Object.keys(parsed).forEach((k) => {
-          const val = parsed[k]
-          const hasValue = val !== null && val !== "" && val !== undefined
-          const prev = reportedFields.get(k)
-          if (prev === undefined) {
-            reportedFields.set(k, hasValue)
-            sendMessage<UpdateFieldStatusMessage>(port, {
-              action: Action.UPDATE_FIELD_STATUS,
-              content: { field: k, found: !!hasValue }
-            })
-          } else if (!prev && hasValue) {
-            reportedFields.set(k, true)
-            sendMessage<UpdateFieldStatusMessage>(port, {
-              action: Action.UPDATE_FIELD_STATUS,
-              content: { field: k, found: true }
-            })
-          }
-          finalResult[k] = val
-        })
-      }
-    } catch (err) {
-      console.warn("⚠️ Could not parse final buffer:", err)
-    }
-
-    console.log("✅ AI processing complete. Final result:", finalResult)
-    // TODO: action and status seem duplicated here
+    const result = await getFinalResult(stream, form, port)
     sendMessage<DoneMessage>(port, {
       action: Action.DONE,
-      content: finalResult
+      content: result
     })
   } catch (err) {
-    console.log("❌ Error during AI processing:", err)
-    sendMessage<UpdateProgressMessage>(port, {
-      action: Action.UPDATE_PROGRESS_MESSAGE,
-      content: "Error during processing."
-    })
+    if (err.message !== ABORT_MESSAGE) {
+      console.log("❌ Error during AI processing:", err)
+      sendMessage<UpdateProgressMessage>(port, {
+        action: Action.UPDATE_PROGRESS_MESSAGE,
+        content: "Error during processing."
+      })
+    }
   } finally {
     try {
-      if (port && port.onMessage && onPortMsg)
-        port.onMessage.removeListener(onPortMsg)
-    } catch (e) {}
+      if (onPortMsg) port.onMessage.removeListener(onPortMsg)
+      port.disconnect()
+    } catch (e) {
+      console.warn("⚠️ Error removing onPortMsg listener:", e)
+    }
   }
 }

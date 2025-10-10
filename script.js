@@ -61,7 +61,7 @@
     return schema
   }
 
-  function toggleLoading(
+  function updateModal(
     isVisible,
     message = "MagicFill: Loading...",
     fields = null
@@ -96,7 +96,7 @@
   box-shadow: 0 8px 30px rgba(2,6,23,0.45);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   font-size: 14px;
-  max-width: 420px;
+  width: 360px;
 }
 .magic-fill-header {
   display: flex;
@@ -107,14 +107,17 @@
 .magic-fill-spinner {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.22);
-  border-top-color: #ffffff;
-  animation: mf-spin 0.9s linear infinite;
-  box-sizing: border-box;
+  flex: 0 0 28px; /* fixed size: don't grow or shrink */
 }
+.magic-fill-spinner .mf-head {
+  transform-origin: 50% 50%;
+  animation: mf-spin 0.85s linear infinite;
+  -webkit-animation: mf-spin 0.85s linear infinite;
+}
+@-webkit-keyframes mf-spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
 @keyframes mf-spin { to { transform: rotate(360deg); } }
-#magic-fill-loading-text { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#magic-fill-loading-text { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
+#magic-fill-count { display: block; margin-top: 8px; font-weight: 700; color: rgba(255,255,255,0.95); font-size: 13px; text-align: left; }
 
 .magic-fill-field-item {
   display: flex;
@@ -239,31 +242,44 @@
         overlay.setAttribute("role", "status")
         overlay.setAttribute("aria-live", "polite")
         overlay.innerHTML = `
-  <div id="magic-fill-loading-box" aria-hidden="false">
-    <div class="magic-fill-header">
-      <div class="magic-fill-spinner" aria-hidden="true"></div>
-      <div id="magic-fill-loading-text"></div>
-      <button id="magic-fill-cancel" aria-label="Cancel" title="Cancel" style="margin-left:auto;">✕</button>
-    </div>
-    <div id="magic-fill-fields-list" aria-hidden="false" role="list" style="display:none;"></div>
-  </div>`
+    <div id="magic-fill-loading-box" aria-hidden="false">
+      <div class="magic-fill-header">
+        <svg class="magic-fill-spinner" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
+          <circle class="mf-track" cx="12" cy="12" r="9.5" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"></circle>
+          <circle class="mf-head" cx="12" cy="12" r="9.5" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="28 60"></circle>
+        </svg>
+  <div id="magic-fill-loading-text"></div>
+  <button id="magic-fill-cancel" type="button" aria-label="Cancel" title="Cancel" style="margin-left:auto; cursor: pointer;">✕</button>
+      </div>
+      <div id="magic-fill-count" aria-hidden="true"></div>
+      <div id="magic-fill-fields-list" aria-hidden="false" role="list" style="display:none;"></div>
+    </div>`
         document.body.appendChild(overlay)
         const cancelBtn = overlay.querySelector("#magic-fill-cancel")
         if (cancelBtn) {
           cancelBtn.addEventListener("click", () => {
+            console.log("❌ User clicked Cancel button.")
             const ov = document.getElementById(OVERLAY_ID)
-            if (
-              ov &&
-              ov.__mf_port &&
-              typeof ov.__mf_port.postMessage === "function"
-            ) {
+            if (ov && ov.__mf_port) {
               try {
-                ov.__mf_port.postMessage({ action: "CANCEL" })
+                if (typeof ov.__mf_port.postMessage === "function") {
+                  ov.__mf_port.postMessage({ action: "CANCEL" })
+                }
               } catch (e) {
                 console.warn("⚠️ Failed to post CANCEL on port", e)
               }
             } else {
               console.log("⚠️ No port to send CANCEL message to.")
+            }
+
+            // Close the overlay/modal
+            try {
+              updateModal(false)
+            } catch (e) {
+              // as a fallback, directly hide the overlay
+              const overlayEl = document.getElementById(OVERLAY_ID)
+              if (overlayEl) overlayEl.style.display = "none"
+              document.documentElement.style.pointerEvents = ""
             }
           })
         }
@@ -285,9 +301,18 @@
           li.className = "magic-fill-field-item"
           li.setAttribute("data-field", f)
           li.setAttribute("role", "listitem")
+          // start neutral (no reported state). the dot will be filled when a report arrives
           li.innerHTML = `<div class="magic-fill-dot" aria-hidden="true"></div><div class="magic-fill-field-name">${escapeHtml(f)}</div>`
+          li.setAttribute("data-reported", "false")
           fieldsListEl.appendChild(li)
         })
+        // initialize counters (reported / total)
+        try {
+          overlay.__mf_total = fields.length
+          overlay.__mf_reportedCount = 0
+          const countEl = document.getElementById("magic-fill-count")
+          if (countEl) countEl.textContent = `0 / ${overlay.__mf_total}`
+        } catch (e) {}
       }
 
       overlay.style.display = "flex"
@@ -305,9 +330,10 @@
             overlay.__mf_port.disconnect()
           } catch (e) {}
         }
-        if (overlay.__mf_updateFieldStatus)
-          delete overlay.__mf_updateFieldStatus
+        if (overlay.__mf_updateFieldStatus) delete overlay.__mf_updateFieldStatus
         if (overlay.__mf_port) delete overlay.__mf_port
+        if (overlay.__mf_total) delete overlay.__mf_total
+        if (overlay.__mf_reportedCount) delete overlay.__mf_reportedCount
       }
       document.documentElement.style.pointerEvents = ""
     }
@@ -322,6 +348,8 @@
       if (!li) return
       const dot = li.querySelector(".magic-fill-dot")
       if (!dot) return
+      const prevReported = li.getAttribute("data-reported") === "true"
+      // set visual state for found / not-found
       if (found) {
         dot.classList.remove("not-found")
         dot.classList.add("found")
@@ -331,6 +359,17 @@
         dot.classList.add("not-found")
         dot.textContent = "✕"
       }
+      // mark as reported if it's the first report for this field
+      if (!prevReported) li.setAttribute("data-reported", "true")
+
+      // update reported counters on overlay
+      try {
+        if (typeof overlayEl.__mf_reportedCount !== "number") overlayEl.__mf_reportedCount = 0
+        if (typeof overlayEl.__mf_total !== "number") overlayEl.__mf_total = overlayEl.querySelectorAll(".magic-fill-field-item").length
+        if (!prevReported) overlayEl.__mf_reportedCount++
+        const countEl = overlayEl.querySelector("#magic-fill-count")
+        if (countEl) countEl.textContent = `${overlayEl.__mf_reportedCount} / ${overlayEl.__mf_total}`
+      } catch (e) {}
     }
 
     // expose update function on overlay element for external use
@@ -361,7 +400,7 @@
       const userFiles = Array.from(event.target.files)
       if (userFiles.length > 0) {
         console.log(`🖼️ ${userFiles.length} file(s) selected.`)
-        toggleLoading(true)
+        updateModal(true)
         try {
           const files = await Promise.all(
             userFiles.map(async (file) => {
@@ -375,7 +414,7 @@
             })
           )
           const form = getFormSchema()
-          toggleLoading(
+          updateModal(
             true,
             "Sending fields to background process...",
             Object.keys(form.properties)
@@ -391,7 +430,7 @@
             if (!msg || !msg.action) return
             switch (msg.action) {
               case "UPDATE_PROGRESS_MESSAGE":
-                toggleLoading(true, msg.content)
+                updateModal(true, msg.content)
                 break
               case "UPDATE_FIELD_STATUS":
                 const overlay = document.getElementById(
@@ -411,7 +450,7 @@
                 } catch (e) {
                   console.warn("⚠️ Error filling form on DONE:", e)
                 }
-                toggleLoading(false)
+                updateModal(false)
                 try {
                   port.disconnect()
                 } catch (e) {}
@@ -460,7 +499,7 @@
 
   openFileExplorer()
 
-  // small helpers used inside toggleLoading (declared here to allow use elsewhere if needed)
+  // small helpers used inside updateModal (declared here to allow use elsewhere if needed)
   function escapeHtml(str) {
     if (!str) return ""
     return String(str).replace(
