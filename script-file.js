@@ -550,7 +550,7 @@
         try {
           const files = await Promise.all(
             userFiles.map(async (file) => {
-              const jpeg = await convertToJpeg(file, 0.7)
+              const jpeg = await convertToJpeg(file, 0.6)
               const buffer = await fileToArrayBuffer(jpeg)
               return {
                 name: file.name,
@@ -616,13 +616,10 @@
                 try {
                   const ov = document.getElementById('magic-fill-loading-overlay')
                   if (ov && typeof ov.__mf_setSuccessState === 'function') {
-                    // show success icon and keep modal open
                     ov.__mf_setSuccessState(true)
                   } else {
-                    // fallback: call updateModal to ensure overlay shows success
                     updateModal(true, 'Done', null, { success: true })
                   }
-                  // update message text
                   const textEl = document.getElementById('magic-fill-loading-text')
                   if (textEl) textEl.textContent = 'Done — form filled.'
                 } catch (e) {}
@@ -641,7 +638,6 @@
           console.log("❌ Error processing files:", error)
         }
       }
-      // document.body.removeChild(input)
     }
 
     input.appendChild(document.createElement("div"))
