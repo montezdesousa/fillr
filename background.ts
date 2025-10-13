@@ -94,7 +94,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log("👆 Context menu item clicked. Injecting content script...")
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["script.js"]
+    files: ["script-file.js"]
   })
 })
 
@@ -252,6 +252,7 @@ async function processFiles(
   let onPortMsg: ((m: any) => void) | undefined = undefined
 
   try {
+    console.time("FILES processing time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: `Preparing ${userFiles.length} file(s) for AI processing...`
@@ -262,6 +263,10 @@ async function processFiles(
         return new File([uint8], f.name, { type: f.type })
       })
     )
+    console.timeEnd("FILES processing time")
+
+    // --- Call Chrome's built-in generative AI API ---
+    console.time("AI startup time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: "Starting AI model..."
@@ -289,6 +294,10 @@ async function processFiles(
       ]
     }))
     await session.append(messages)
+    console.timeEnd("AI startup time")
+    
+    // --- Process the response stream ---
+    console.time("AI processing time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: "AI model is processing the files..."
@@ -321,6 +330,7 @@ async function processFiles(
       action: Action.DONE,
       content: result
     })
+    console.timeEnd("AI processing time")
   } catch (err) {
     if (err.message !== ABORT_MESSAGE) {
       console.log("❌ Error during AI processing:", err)

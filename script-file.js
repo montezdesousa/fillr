@@ -2,21 +2,27 @@
   function fillForm(form, content) {
     console.log(`🖊️ Filling form with content: ${JSON.stringify(content)}`)
     let filledCount = 0
+
+    const overlay = document.getElementById("magic-fill-loading-overlay")
     Object.keys(form.properties).forEach((item) => {
       const targetField =
         document.getElementById(item) ||
         document.querySelector(`[name="${item}"]`)
+
       if (!targetField) {
+        overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ Field not found in DOM: ${item}`)
         return
       }
       const value = content[item]
       if (value === undefined) {
+        overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ No content for field: ${item}`)
         return
       }
       targetField.value = value
       filledCount++
+      overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, true)
       targetField.dispatchEvent(new Event("input", { bubbles: true }))
       targetField.dispatchEvent(new Event("change", { bubbles: true }))
     })
@@ -64,7 +70,8 @@
   function updateModal(
     isVisible,
     message = "MagicFill: Loading...",
-    fields = null
+    fields = null,
+    options = {}
   ) {
     const OVERLAY_ID = "magic-fill-loading-overlay"
     const STYLE_ID = "magic-fill-loading-styles"
@@ -109,10 +116,21 @@
   height: 28px;
   flex: 0 0 28px; /* fixed size: don't grow or shrink */
 }
+.magic-fill-spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 .magic-fill-spinner .mf-head {
   transform-origin: 50% 50%;
   animation: mf-spin 0.85s linear infinite;
   -webkit-animation: mf-spin 0.85s linear infinite;
+}
+/* when spinner has mf-stopped class, pause animation */
+.magic-fill-spinner.mf-stopped .mf-head,
+.magic-fill-spinner .mf-head[style*="animation-play-state: paused"] {
+  animation-play-state: paused !important;
+  -webkit-animation-play-state: paused !important;
 }
 @-webkit-keyframes mf-spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
 @keyframes mf-spin { to { transform: rotate(360deg); } }
@@ -147,6 +165,16 @@
   color: #fff;
 }
 .magic-fill-dot.not-found {
+  background: #ff6b6b;
+  border-color: rgba(255,255,255,0.9);
+  color: #fff;
+}
+.magic-fill-dot.filled {
+  background: #24b47e;
+  border-color: rgba(255,255,255,0.9);
+  color: #fff;
+}
+.magic-fill-dot.not-filled {
   background: #ff6b6b;
   border-color: rgba(255,255,255,0.9);
   color: #fff;
@@ -244,10 +272,16 @@
         overlay.innerHTML = `
     <div id="magic-fill-loading-box" aria-hidden="false">
       <div class="magic-fill-header">
-        <svg class="magic-fill-spinner" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
+        <div class="magic-fill-spinner-container"><svg class="magic-fill-spinner" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
           <circle class="mf-track" cx="12" cy="12" r="9.5" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"></circle>
           <circle class="mf-head" cx="12" cy="12" r="9.5" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="28 60"></circle>
         </svg>
+        <!-- success icon (hidden by default) -->
+        <svg class="magic-fill-success" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+          <circle cx="12" cy="12" r="9.5" fill="none" stroke="#ffffff" stroke-width="2"></circle>
+          <path d="M7 13l3 3 7-7" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        </div>
   <div id="magic-fill-loading-text"></div>
   <button id="magic-fill-cancel" type="button" aria-label="Cancel" title="Cancel" style="margin-left:auto; cursor: pointer;">✕</button>
       </div>
@@ -260,7 +294,7 @@
           cancelBtn.addEventListener("click", () => {
             console.log("❌ User clicked Cancel button.")
             const ov = document.getElementById(OVERLAY_ID)
-            if (ov && ov.__mf_port) {
+            if (ov && ov.__mf_port && ov.__mf_portAlive) {
               try {
                 if (typeof ov.__mf_port.postMessage === "function") {
                   ov.__mf_port.postMessage({ action: "CANCEL" })
@@ -268,6 +302,8 @@
               } catch (e) {
                 console.warn("⚠️ Failed to post CANCEL on port", e)
               }
+            } else if (ov && ov.__mf_port && !ov.__mf_portAlive) {
+              console.log("⚠️ Port exists but is disconnected; not sending CANCEL.")
             } else {
               console.log("⚠️ No port to send CANCEL message to.")
             }
@@ -309,7 +345,8 @@
         // initialize counters (reported / total)
         try {
           overlay.__mf_total = fields.length
-          overlay.__mf_reportedCount = 0
+          overlay.__mf_AiReportedCount = 0
+          overlay.__mf_DomReportedCount = 0
           const countEl = document.getElementById("magic-fill-count")
           if (countEl) countEl.textContent = `0 / ${overlay.__mf_total}`
         } catch (e) {}
@@ -330,16 +367,17 @@
             overlay.__mf_port.disconnect()
           } catch (e) {}
         }
-        if (overlay.__mf_updateFieldStatus) delete overlay.__mf_updateFieldStatus
+        if (overlay.__mf_updateFieldFromAi) delete overlay.__mf_updateFieldFromAi
+        if (overlay.__mf_updateFieldFromDom) delete overlay.__mf_updateFieldFromDom
         if (overlay.__mf_port) delete overlay.__mf_port
         if (overlay.__mf_total) delete overlay.__mf_total
-        if (overlay.__mf_reportedCount) delete overlay.__mf_reportedCount
+        if (overlay.__mf_AiReportedCount) delete overlay.__mf_AiReportedCount
+        if (overlay.__mf_DomReportedCount) delete overlay.__mf_DomReportedCount
       }
       document.documentElement.style.pointerEvents = ""
     }
 
-    // helper to update a single field's DOM state
-    function updateFieldStatus(fieldName, found) {
+    function updateFieldFromDom(fieldName, filled) {
       const overlayEl = document.getElementById(OVERLAY_ID)
       if (!overlayEl) return
       const li = overlayEl.querySelector(
@@ -348,35 +386,90 @@
       if (!li) return
       const dot = li.querySelector(".magic-fill-dot")
       if (!dot) return
+       dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      // set visual state for filled / not-filled
+      if (filled) {
+        dot.classList.remove("not-found")
+        dot.classList.add("filled")
+        dot.textContent = "✓"
+      } else {
+        dot.classList.remove("found")
+        dot.classList.add("not-filled")
+        dot.textContent = "✕"
+      }
+
+      // update reported counters on overlay
+      try {
+        if (typeof overlayEl.__mf_DomReportedCount !== "number") overlayEl.__mf_DomReportedCount = 0
+        if (typeof overlayEl.__mf_total !== "number") overlayEl.__mf_total = overlayEl.querySelectorAll(".magic-fill-field-item").length
+        if (filled) overlayEl.__mf_DomReportedCount++
+        const countEl = overlayEl.querySelector("#magic-fill-count")
+        if (countEl) countEl.textContent = `${overlayEl.__mf_DomReportedCount} / ${overlayEl.__mf_total} filled`
+      } catch (e) {}
+
+    }
+
+
+    // helper to update a single field's DOM state
+    function updateFieldFromAi(fieldName, found) {
+      const overlayEl = document.getElementById(OVERLAY_ID)
+      if (!overlayEl) return
+      const li = overlayEl.querySelector(
+        `[data-field="${cssEscape(fieldName)}"]`
+      )
+      if (!li) return
+      const dot = li.querySelector(".magic-fill-dot")
+      if (!dot) return
+      dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
       const prevReported = li.getAttribute("data-reported") === "true"
       // set visual state for found / not-found
       if (found) {
         dot.classList.remove("not-found")
         dot.classList.add("found")
-        dot.textContent = "✓"
       } else {
         dot.classList.remove("found")
         dot.classList.add("not-found")
-        dot.textContent = "✕"
       }
       // mark as reported if it's the first report for this field
       if (!prevReported) li.setAttribute("data-reported", "true")
 
       // update reported counters on overlay
       try {
-        if (typeof overlayEl.__mf_reportedCount !== "number") overlayEl.__mf_reportedCount = 0
+        if (typeof overlayEl.__mf_AiReportedCount !== "number") overlayEl.__mf_AiReportedCount = 0
         if (typeof overlayEl.__mf_total !== "number") overlayEl.__mf_total = overlayEl.querySelectorAll(".magic-fill-field-item").length
-        if (!prevReported) overlayEl.__mf_reportedCount++
+        if (!prevReported) overlayEl.__mf_AiReportedCount++
         const countEl = overlayEl.querySelector("#magic-fill-count")
-        if (countEl) countEl.textContent = `${overlayEl.__mf_reportedCount} / ${overlayEl.__mf_total}`
+        if (countEl) countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
       } catch (e) {}
+    }
+
+    // expose a small API to toggle success state
+    function setSuccessState(enabled) {
+      const overlayEl = document.getElementById(OVERLAY_ID)
+      if (!overlayEl) return
+      const spinner = overlayEl.querySelector('.magic-fill-spinner')
+      const success = overlayEl.querySelector('.magic-fill-success')
+      if (enabled) {
+        if (spinner) spinner.style.display = 'none'
+        if (success) success.style.display = 'block'
+        // pause spinner animation class if present
+        if (spinner) spinner.classList.add('mf-stopped')
+      } else {
+        if (spinner) spinner.style.display = ''
+        if (success) success.style.display = 'none'
+        if (spinner) spinner.classList.remove('mf-stopped')
+      }
     }
 
     // expose update function on overlay element for external use
     if (isVisible) {
-      overlay.__mf_updateFieldStatus = updateFieldStatus
-    } else if (overlay && overlay.__mf_updateFieldStatus) {
-      delete overlay.__mf_updateFieldStatus
+      overlay.__mf_updateFieldFromAi = updateFieldFromAi
+      overlay.__mf_updateFieldFromDom = updateFieldFromDom
+      overlay.__mf_setSuccessState = setSuccessState
+    } else if (overlay && overlay.__mf_updateFieldFromAi) {
+      delete overlay.__mf_updateFieldFromAi
+      if (overlay.__mf_updateFieldFromDom) delete overlay.__mf_updateFieldFromDom
+      if (overlay.__mf_setSuccessState) delete overlay.__mf_setSuccessState
     }
   }
 
@@ -386,6 +479,59 @@
       reader.onload = () => resolve(reader.result)
       reader.onerror = (error) => reject(error)
       reader.readAsArrayBuffer(file)
+    })
+  }
+
+  function convertToJpeg(file, quality = 0.8) {
+    const outputMimeType = "image/jpeg";
+    const MAX_WIDTH = 1920;
+    const MAX_HEIGHT = 1920;    
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const blobUrl = URL.createObjectURL(file)
+      img.src = blobUrl
+
+      img.onerror = () => {
+        URL.revokeObjectURL(blobUrl)
+        reject(new Error("Image load error"))
+      }
+
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl)
+        let width = img.width;
+        let height = img.height;        
+        if (width > height) {
+            if (width > MAX_WIDTH) {
+                height = Math.round(height * (MAX_WIDTH / width));
+                width = MAX_WIDTH;
+            }
+        } else {
+            if (height > MAX_HEIGHT) {
+                width = Math.round(width * (MAX_HEIGHT / height));
+                height = MAX_HEIGHT;
+            }
+        }        
+        const canvas = document.createElement("canvas")
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")
+        ctx.drawImage(img, 0, 0)
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                type: outputMimeType,
+                lastModified: Date.now()
+              })
+              resolve(compressedFile)
+            } else {
+              reject(new Error("Image compression failed"))
+            }
+          },
+          outputMimeType,
+          quality
+        )
+      }
     })
   }
 
@@ -404,7 +550,8 @@
         try {
           const files = await Promise.all(
             userFiles.map(async (file) => {
-              const buffer = await fileToArrayBuffer(file)
+              const jpeg = await convertToJpeg(file, 0.7)
+              const buffer = await fileToArrayBuffer(jpeg)
               return {
                 name: file.name,
                 type: file.type,
@@ -424,7 +571,23 @@
 
           // attach the port to the overlay so the cancel button can access it
           const ovEl = document.getElementById("magic-fill-loading-overlay")
-          if (ovEl) ovEl.__mf_port = port
+          if (ovEl) {
+            ovEl.__mf_port = port
+            // mark port as alive so the cancel handler can check before posting
+            ovEl.__mf_portAlive = true
+          }
+
+          // clear the alive flag when the port disconnects
+          try {
+            if (port && port.onDisconnect && typeof port.onDisconnect.addListener === 'function') {
+              port.onDisconnect.addListener(() => {
+                try {
+                  const ovd = document.getElementById("magic-fill-loading-overlay")
+                  if (ovd) ovd.__mf_portAlive = false
+                } catch (e) {}
+              })
+            }
+          } catch (e) {}
 
           port.onMessage.addListener((msg) => {
             if (!msg || !msg.action) return
@@ -436,8 +599,8 @@
                 const overlay = document.getElementById(
                   "magic-fill-loading-overlay"
                 )
-                if (overlay && overlay.__mf_updateFieldStatus) {
-                  overlay.__mf_updateFieldStatus(
+                if (overlay && overlay.__mf_updateFieldFromAi) {
+                  overlay.__mf_updateFieldFromAi(
                     msg.content.field,
                     !!msg.content.found
                   )
@@ -450,9 +613,18 @@
                 } catch (e) {
                   console.warn("⚠️ Error filling form on DONE:", e)
                 }
-                updateModal(false)
                 try {
-                  port.disconnect()
+                  const ov = document.getElementById('magic-fill-loading-overlay')
+                  if (ov && typeof ov.__mf_setSuccessState === 'function') {
+                    // show success icon and keep modal open
+                    ov.__mf_setSuccessState(true)
+                  } else {
+                    // fallback: call updateModal to ensure overlay shows success
+                    updateModal(true, 'Done', null, { success: true })
+                  }
+                  // update message text
+                  const textEl = document.getElementById('magic-fill-loading-text')
+                  if (textEl) textEl.textContent = 'Done — form filled.'
                 } catch (e) {}
                 break
               default:
@@ -469,7 +641,7 @@
           console.log("❌ Error processing files:", error)
         }
       }
-      document.body.removeChild(input)
+      // document.body.removeChild(input)
     }
 
     input.appendChild(document.createElement("div"))
@@ -490,8 +662,8 @@
         `Field status update: ${msg.content.field} => ${msg.content.found}`
       )
       const overlay = document.getElementById("magic-fill-loading-overlay")
-      if (overlay && overlay.__mf_updateFieldStatus) {
-        overlay.__mf_updateFieldStatus(msg.content.field, !!msg.content.found)
+      if (overlay && overlay.__mf_updateFieldFromAi) {
+        overlay.__mf_updateFieldFromAi(msg.content.field, !!msg.content.found)
       }
       return
     }
