@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
-    "package": "plasmo package"
+    "package": "plasmo package",
+    "tw:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./build/chrome-mv3-dev/script-file.css"
   },
   "dependencies": {
     "plasmo": "0.90.5",
@@ -20,7 +21,11 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
     "prettier": "3.2.4",
+    "tailwindcss": "^4.1.14",
     "typescript": "5.3.3"
   },
   "manifest": {
@@ -34,9 +39,14 @@
     ],
     "web_accessible_resources": [
       {
-        "resources": ["script-file.js"],
-        "matches": ["<all_urls>"]
+        "resources": [
+          "script-file.js",
+          "script-file.css"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
       }
-    ]    
+    ]
   }
 }

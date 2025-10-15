@@ -10,19 +10,25 @@
         document.querySelector(`[name="${item}"]`)
 
       if (!targetField) {
-        overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, false)
+        overlay &&
+          overlay.__mf_updateFieldFromDom &&
+          overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ Field not found in DOM: ${item}`)
         return
       }
       const value = content[item]
       if (value === undefined) {
-        overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, false)
+        overlay &&
+          overlay.__mf_updateFieldFromDom &&
+          overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ No content for field: ${item}`)
         return
       }
       targetField.value = value
       filledCount++
-      overlay && overlay.__mf_updateFieldFromDom && overlay.__mf_updateFieldFromDom(item, true)
+      overlay &&
+        overlay.__mf_updateFieldFromDom &&
+        overlay.__mf_updateFieldFromDom(item, true)
       targetField.dispatchEvent(new Event("input", { bubbles: true }))
       targetField.dispatchEvent(new Event("change", { bubbles: true }))
     })
@@ -74,193 +80,6 @@
     options = {}
   ) {
     const OVERLAY_ID = "magic-fill-loading-overlay"
-    const STYLE_ID = "magic-fill-loading-styles"
-
-    if (!document.getElementById(STYLE_ID)) {
-      const style = document.createElement("style")
-      style.id = STYLE_ID
-      style.textContent = `
-#${OVERLAY_ID} {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  background: rgba(0,0,0,0.32);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-}
-#magic-fill-loading-box {
-  display: inline-flex;
-  gap: 12px;
-  align-items: flex-start;
-  flex-direction: column;
-  padding: 20px;
-  background: linear-gradient(180deg, #0b66ff 0%, #0047b3 100%);
-  color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(2,6,23,0.45);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  font-size: 14px;
-  width: 360px;
-}
-.magic-fill-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-}
-.magic-fill-spinner {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px; /* fixed size: don't grow or shrink */
-}
-.magic-fill-spinner-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.magic-fill-spinner .mf-head {
-  transform-origin: 50% 50%;
-  animation: mf-spin 0.85s linear infinite;
-  -webkit-animation: mf-spin 0.85s linear infinite;
-}
-/* when spinner has mf-stopped class, pause animation */
-.magic-fill-spinner.mf-stopped .mf-head,
-.magic-fill-spinner .mf-head[style*="animation-play-state: paused"] {
-  animation-play-state: paused !important;
-  -webkit-animation-play-state: paused !important;
-}
-@-webkit-keyframes mf-spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
-@keyframes mf-spin { to { transform: rotate(360deg); } }
-#magic-fill-loading-text { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
-#magic-fill-count { display: block; margin-top: 8px; font-weight: 700; color: rgba(255,255,255,0.95); font-size: 13px; text-align: left; }
-
-.magic-fill-field-item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 6px 4px;
-  color: rgba(255,255,255,0.95);
-  font-size: 13px;
-}
-.magic-fill-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.6);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1;
-  color: rgba(255,255,255,0.95);
-  box-sizing: border-box;
-}
-.magic-fill-dot.found {
-  background: #24b47e;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-dot.not-found {
-  background: #ff6b6b;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-dot.filled {
-  background: #24b47e;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-dot.not-filled {
-  background: #ff6b6b;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-field-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#magic-fill-fields-list {
-  margin-top: 8px;
-  display: block;
-  width: 100%;
-  max-height: 240px;
-  overflow: auto;
-  padding: 6px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  box-sizing: border-box;
-}
-
-/* Scrollbar styling */
-/* WebKit / Blink (Chrome, Edge, Safari) */
-#magic-fill-fields-list::-webkit-scrollbar {
-  width: 20px;
-  height: 20px;
-}
-#magic-fill-fields-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-#magic-fill-fields-list::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.5);
-  border-radius: 8px;
-  border: 2px solid transparent; /* gives padding look */
-  background-clip: padding-box;
-}
-#magic-fill-fields-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.14);
-}
-
-/* Firefox */
-#magic-fill-fields-list {
-  scrollbar-width: medium;
-  scrollbar-color: rgba(255,255,255,0.5) transparent;
-}
-.magic-fill-field-item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 6px 4px;
-  color: rgba(255,255,255,0.95);
-  font-size: 13px;
-}
-.magic-fill-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.6);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1;
-  color: rgba(255,255,255,0.95);
-  box-sizing: border-box;
-}
-.magic-fill-dot.found {
-  background: #24b47e;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-dot.not-found {
-  background: #ff6b6b;
-  border-color: rgba(255,255,255,0.9);
-  color: #fff;
-}
-.magic-fill-field-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-`
-      document.head.appendChild(style)
-    }
-
     let overlay = document.getElementById(OVERLAY_ID)
 
     if (isVisible) {
@@ -269,31 +88,80 @@
         overlay.id = OVERLAY_ID
         overlay.setAttribute("role", "status")
         overlay.setAttribute("aria-live", "polite")
+
+        overlay.className =
+          "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
+
         overlay.innerHTML = `
-    <div id="magic-fill-loading-box" aria-hidden="false">
-      <div class="magic-fill-header">
-        <div class="magic-fill-spinner-container"><svg class="magic-fill-spinner" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
-          <circle class="mf-track" cx="12" cy="12" r="9.5" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"></circle>
-          <circle class="mf-head" cx="12" cy="12" r="9.5" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="28 60"></circle>
-        </svg>
-        <!-- success icon (hidden by default) -->
-        <svg class="magic-fill-success" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg" style="display:none;">
-          <circle cx="12" cy="12" r="9.5" fill="none" stroke="#ffffff" stroke-width="2"></circle>
-          <path d="M7 13l3 3 7-7" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
+    <div id="magic-fill-loading-box" aria-hidden="false" 
+      class="
+        inline-flex flex-col items-start gap-3 w-96 p-5 
+        bg-white text-gray-800 rounded-xl shadow-2xl shadow-gray-700/50 
+        font-sans
+      "
+    >
+      <div class="flex items-center w-full gap-3">
+        <div class="relative flex justify-center items-center h-7 w-7">
+          <svg class="animate-spin magic-fill-spinner" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
+            <circle class="stroke-gray-200" cx="12" cy="12" r="9.5" fill="none" stroke-width="2"></circle>
+            <circle class="stroke-gray-800" cx="12" cy="12" r="9.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="28 60"></circle>
+          </svg>
+          <svg class="absolute hidden magic-fill-success" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9.5" fill="none" stroke="#22c55e" stroke-width="2"></circle>
+            <path d="M7 13l3 3 7-7" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
         </div>
-  <div id="magic-fill-loading-text"></div>
-  <button id="magic-fill-cancel" type="button" aria-label="Cancel" title="Cancel" style="margin-left:auto; cursor: pointer;">✕</button>
+        <div id="magic-fill-loading-text" class="truncate flex-grow min-w-0 font-medium"></div>        
       </div>
-      <div id="magic-fill-count" aria-hidden="true"></div>
-      <div id="magic-fill-fields-list" aria-hidden="false" role="list" style="display:none;"></div>
+      
+      <div id="magic-fill-count" aria-hidden="true" class="mt-2 font-semibold text-sm text-gray-600"></div>
+      
+      <div id="magic-fill-fields-list" aria-hidden="false"
+        class="
+          w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
+          flex flex-col gap-y-2
+          magic-fill-list-container
+        "
+      ></div>
+      <div id="magic-fill-actions" aria-hidden="true" class="mt-4 flex justify-end gap-3 w-full">
+          <button id="magic-fill-btn-cancel" type="button" 
+              class="
+                  cursor-pointer px-4 py-2 text-sm font-medium rounded-lg text-gray-700 
+                  hover:bg-gray-100 transition-colors
+              "
+          >
+              Cancel
+          </button>
+          <button id="magic-fill-btn-ok" type="button" disabled 
+    class="
+        cursor-pointer px-4 py-2 text-sm font-medium rounded-lg 
+        bg-gray-300 text-gray-500 hover:bg-blue-700 
+        transition-colors
+    "
+>
+    OK
+</button>
+      </div>      
     </div>`
+
         document.body.appendChild(overlay)
-        const cancelBtn = overlay.querySelector("#magic-fill-cancel")
+        const okBtn = overlay.querySelector("#magic-fill-btn-ok")
+        const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
+
+        if (okBtn) {
+          okBtn.addEventListener("click", () => {
+            console.log("✅ User clicked OK button (Fill accepted).")
+            updateModal(false) // Closes the modal
+          })
+        }
+
         if (cancelBtn) {
           cancelBtn.addEventListener("click", () => {
+            // ... (Keep your existing Cancel button logic here) ...
+            // Your existing logic for posting CANCEL and calling updateModal(false)
             console.log("❌ User clicked Cancel button.")
             const ov = document.getElementById(OVERLAY_ID)
+            // ... (rest of the existing CANCEL logic) ...
             if (ov && ov.__mf_port && ov.__mf_portAlive) {
               try {
                 if (typeof ov.__mf_port.postMessage === "function") {
@@ -302,17 +170,10 @@
               } catch (e) {
                 console.warn("⚠️ Failed to post CANCEL on port", e)
               }
-            } else if (ov && ov.__mf_port && !ov.__mf_portAlive) {
-              console.log("⚠️ Port exists but is disconnected; not sending CANCEL.")
-            } else {
-              console.log("⚠️ No port to send CANCEL message to.")
             }
-
-            // Close the overlay/modal
             try {
               updateModal(false)
             } catch (e) {
-              // as a fallback, directly hide the overlay
               const overlayEl = document.getElementById(OVERLAY_ID)
               if (overlayEl) overlayEl.style.display = "none"
               document.documentElement.style.pointerEvents = ""
@@ -330,18 +191,34 @@
         fields.length > 0 &&
         fieldsListEl
       ) {
-        fieldsListEl.style.display = "block"
+        // fieldsListEl.style.display = "block"
         fieldsListEl.innerHTML = ""
         fields.forEach((f) => {
           const li = document.createElement("div")
-          li.className = "magic-fill-field-item"
+          li.className = "magic-fill-field-item flex items-center py-1"
           li.setAttribute("data-field", f)
           li.setAttribute("role", "listitem")
-          // start neutral (no reported state). the dot will be filled when a report arrives
-          li.innerHTML = `<div class="magic-fill-dot" aria-hidden="true"></div><div class="magic-fill-field-name">${escapeHtml(f)}</div>`
+          li.innerHTML = `
+              <div 
+                class="
+                  w-3 h-3 rounded-full border-2 border-gray-400 
+                  flex items-center justify-center 
+                  font-bold text-xs leading-none text-white 
+                  shrink-0 mr-2 magic-fill-dot
+                " 
+                aria-hidden="true"
+              ></div>
+              
+              <div 
+                  class="magic-fill-field-name truncate flex-grow min-w-0 -mt-px"
+              >
+                  ${escapeHtml(f)}
+              </div>
+            `
           li.setAttribute("data-reported", "false")
           fieldsListEl.appendChild(li)
         })
+        updateButtonState("LOADING")
         // initialize counters (reported / total)
         try {
           overlay.__mf_total = fields.length
@@ -367,8 +244,10 @@
             overlay.__mf_port.disconnect()
           } catch (e) {}
         }
-        if (overlay.__mf_updateFieldFromAi) delete overlay.__mf_updateFieldFromAi
-        if (overlay.__mf_updateFieldFromDom) delete overlay.__mf_updateFieldFromDom
+        if (overlay.__mf_updateFieldFromAi)
+          delete overlay.__mf_updateFieldFromAi
+        if (overlay.__mf_updateFieldFromDom)
+          delete overlay.__mf_updateFieldFromDom
         if (overlay.__mf_port) delete overlay.__mf_port
         if (overlay.__mf_total) delete overlay.__mf_total
         if (overlay.__mf_AiReportedCount) delete overlay.__mf_AiReportedCount
@@ -386,29 +265,43 @@
       if (!li) return
       const dot = li.querySelector(".magic-fill-dot")
       if (!dot) return
-       dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
-      // set visual state for filled / not-filled
+      dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
       if (filled) {
-        dot.classList.remove("not-found")
-        dot.classList.add("filled")
+        // SUCCESS: Apply Green background and border utilities
+        dot.classList.remove(
+          "bg-red-500",
+          "border-red-600",
+          "bg-yellow-500",
+          "border-yellow-600"
+        )
+        dot.classList.add("bg-green-500", "border-green-600")
         dot.textContent = "✓"
       } else {
-        dot.classList.remove("found")
-        dot.classList.add("not-filled")
+        // SKIPPED: Apply Yellow background and border utilities
+        dot.classList.remove(
+          "bg-green-500",
+          "border-green-600",
+          "bg-red-500",
+          "border-red-600"
+        )
+        dot.classList.add("bg-yellow-500", "border-yellow-600")
         dot.textContent = "✕"
       }
 
       // update reported counters on overlay
       try {
-        if (typeof overlayEl.__mf_DomReportedCount !== "number") overlayEl.__mf_DomReportedCount = 0
-        if (typeof overlayEl.__mf_total !== "number") overlayEl.__mf_total = overlayEl.querySelectorAll(".magic-fill-field-item").length
+        if (typeof overlayEl.__mf_DomReportedCount !== "number")
+          overlayEl.__mf_DomReportedCount = 0
+        if (typeof overlayEl.__mf_total !== "number")
+          overlayEl.__mf_total = overlayEl.querySelectorAll(
+            ".magic-fill-field-item"
+          ).length
         if (filled) overlayEl.__mf_DomReportedCount++
         const countEl = overlayEl.querySelector("#magic-fill-count")
-        if (countEl) countEl.textContent = `${overlayEl.__mf_DomReportedCount} / ${overlayEl.__mf_total} filled`
+        if (countEl)
+          countEl.textContent = `${overlayEl.__mf_DomReportedCount} / ${overlayEl.__mf_total} filled`
       } catch (e) {}
-
     }
-
 
     // helper to update a single field's DOM state
     function updateFieldFromAi(fieldName, found) {
@@ -424,40 +317,100 @@
       const prevReported = li.getAttribute("data-reported") === "true"
       // set visual state for found / not-found
       if (found) {
-        dot.classList.remove("not-found")
-        dot.classList.add("found")
+        // FOUND: Apply Blue background and border utilities
+        dot.classList.remove(
+          "bg-red-500",
+          "border-red-600",
+          "bg-yellow-500",
+          "border-yellow-600"
+        )
+        dot.classList.add("bg-blue-500", "border-blue-600")
       } else {
-        dot.classList.remove("found")
-        dot.classList.add("not-found")
+        // NOT FOUND: Apply Red background and border utilities
+        dot.classList.remove(
+          "bg-blue-500",
+          "border-blue-600",
+          "bg-yellow-500",
+          "border-yellow-600"
+        )
+        dot.classList.add("bg-red-500", "border-red-600")
       }
       // mark as reported if it's the first report for this field
       if (!prevReported) li.setAttribute("data-reported", "true")
 
       // update reported counters on overlay
       try {
-        if (typeof overlayEl.__mf_AiReportedCount !== "number") overlayEl.__mf_AiReportedCount = 0
-        if (typeof overlayEl.__mf_total !== "number") overlayEl.__mf_total = overlayEl.querySelectorAll(".magic-fill-field-item").length
+        if (typeof overlayEl.__mf_AiReportedCount !== "number")
+          overlayEl.__mf_AiReportedCount = 0
+        if (typeof overlayEl.__mf_total !== "number")
+          overlayEl.__mf_total = overlayEl.querySelectorAll(
+            ".magic-fill-field-item"
+          ).length
         if (!prevReported) overlayEl.__mf_AiReportedCount++
         const countEl = overlayEl.querySelector("#magic-fill-count")
-        if (countEl) countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
+        if (countEl)
+          countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
       } catch (e) {}
     }
 
+// helper to manage OK/Cancel button states
+function updateButtonState(state) {
+    const overlayEl = document.getElementById(OVERLAY_ID)
+    if (!overlayEl) return
+    
+    // Note: actionsEl is not strictly needed here but can be if you want to show/hide the container.
+    // const actionsEl = overlayEl.querySelector('#magic-fill-actions')
+    
+    const okBtn = overlayEl.querySelector('#magic-fill-btn-ok')
+    const cancelBtn = overlayEl.querySelector('#magic-fill-btn-cancel')
+
+    if (!okBtn || !cancelBtn) return
+    
+    // Classes to manually swap:
+    const ACTIVE_COLORS = ["bg-blue-600", "hover:bg-blue-700"];
+    const INACTIVE_COLORS = ["bg-gray-300", "text-gray-500"]; // Manually derived from disabled: styles
+
+    if (state === 'DONE') {
+        // --- STATE: DONE (OK Enabled) ---
+        
+        // 1. Enable OK button and Disable Cancel button
+        okBtn.disabled = false;
+        cancelBtn.disabled = true;
+        
+        // 2. Add ACTIVE colors (blue) and REMOVE INACTIVE colors (gray)
+        okBtn.classList.add(...ACTIVE_COLORS);
+        okBtn.classList.remove(...INACTIVE_COLORS);
+        
+    } else {
+        // --- STATE: LOADING (OK Disabled) ---
+        
+        // 1. Disable OK button and Enable Cancel button
+        okBtn.disabled = true;
+        cancelBtn.disabled = false;
+        
+        // 2. Remove ACTIVE colors (blue) and ADD INACTIVE colors (gray)
+        // This ensures the button *looks* disabled when it is disabled.
+        okBtn.classList.remove(...ACTIVE_COLORS);
+        okBtn.classList.add(...INACTIVE_COLORS);
+    }
+}
     // expose a small API to toggle success state
     function setSuccessState(enabled) {
       const overlayEl = document.getElementById(OVERLAY_ID)
       if (!overlayEl) return
-      const spinner = overlayEl.querySelector('.magic-fill-spinner')
-      const success = overlayEl.querySelector('.magic-fill-success')
+
+      // NOW FINDS THE ELEMENTS:
+      const spinner = overlayEl.querySelector(".magic-fill-spinner")
+      const success = overlayEl.querySelector(".magic-fill-success")
+
       if (enabled) {
-        if (spinner) spinner.style.display = 'none'
-        if (success) success.style.display = 'block'
-        // pause spinner animation class if present
-        if (spinner) spinner.classList.add('mf-stopped')
+        if (spinner) spinner.style.display = "none" // Stops the spinner
+        if (success) success.style.display = "block" // Shows the checkmark
+        // The mf-stopped class is no longer necessary, as display: none handles it.
       } else {
-        if (spinner) spinner.style.display = ''
-        if (success) success.style.display = 'none'
-        if (spinner) spinner.classList.remove('mf-stopped')
+        if (spinner) spinner.style.display = "" // Resets to default (block/inline)
+        if (success) success.style.display = "none" // Hides the checkmark
+        // The mf-stopped class is no longer necessary.
       }
     }
 
@@ -466,10 +419,13 @@
       overlay.__mf_updateFieldFromAi = updateFieldFromAi
       overlay.__mf_updateFieldFromDom = updateFieldFromDom
       overlay.__mf_setSuccessState = setSuccessState
+      overlay.__mf_updateButtonState = updateButtonState
     } else if (overlay && overlay.__mf_updateFieldFromAi) {
       delete overlay.__mf_updateFieldFromAi
-      if (overlay.__mf_updateFieldFromDom) delete overlay.__mf_updateFieldFromDom
+      if (overlay.__mf_updateFieldFromDom)
+        delete overlay.__mf_updateFieldFromDom
       if (overlay.__mf_setSuccessState) delete overlay.__mf_setSuccessState
+      if (overlay.__mf_updateButtonState) delete overlay.__mf_updateButtonState
     }
   }
 
@@ -483,9 +439,9 @@
   }
 
   function convertToJpeg(file, quality = 0.8) {
-    const outputMimeType = "image/jpeg";
-    const MAX_WIDTH = 1920;
-    const MAX_HEIGHT = 1920;    
+    const outputMimeType = "image/jpeg"
+    const MAX_WIDTH = 1920
+    const MAX_HEIGHT = 1920
     return new Promise((resolve, reject) => {
       const img = new Image()
       const blobUrl = URL.createObjectURL(file)
@@ -498,19 +454,19 @@
 
       img.onload = () => {
         URL.revokeObjectURL(blobUrl)
-        let width = img.width;
-        let height = img.height;        
+        let width = img.width
+        let height = img.height
         if (width > height) {
-            if (width > MAX_WIDTH) {
-                height = Math.round(height * (MAX_WIDTH / width));
-                width = MAX_WIDTH;
-            }
+          if (width > MAX_WIDTH) {
+            height = Math.round(height * (MAX_WIDTH / width))
+            width = MAX_WIDTH
+          }
         } else {
-            if (height > MAX_HEIGHT) {
-                width = Math.round(width * (MAX_HEIGHT / height));
-                height = MAX_HEIGHT;
-            }
-        }        
+          if (height > MAX_HEIGHT) {
+            width = Math.round(width * (MAX_HEIGHT / height))
+            height = MAX_HEIGHT
+          }
+        }
         const canvas = document.createElement("canvas")
         canvas.width = width
         canvas.height = height
@@ -519,10 +475,14 @@
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
-                type: outputMimeType,
-                lastModified: Date.now()
-              })
+              const compressedFile = new File(
+                [blob],
+                file.name.replace(/\.[^/.]+$/, ".jpg"),
+                {
+                  type: outputMimeType,
+                  lastModified: Date.now()
+                }
+              )
               resolve(compressedFile)
             } else {
               reject(new Error("Image compression failed"))
@@ -579,10 +539,16 @@
 
           // clear the alive flag when the port disconnects
           try {
-            if (port && port.onDisconnect && typeof port.onDisconnect.addListener === 'function') {
+            if (
+              port &&
+              port.onDisconnect &&
+              typeof port.onDisconnect.addListener === "function"
+            ) {
               port.onDisconnect.addListener(() => {
                 try {
-                  const ovd = document.getElementById("magic-fill-loading-overlay")
+                  const ovd = document.getElementById(
+                    "magic-fill-loading-overlay"
+                  )
                   if (ovd) ovd.__mf_portAlive = false
                 } catch (e) {}
               })
@@ -614,14 +580,21 @@
                   console.warn("⚠️ Error filling form on DONE:", e)
                 }
                 try {
-                  const ov = document.getElementById('magic-fill-loading-overlay')
-                  if (ov && typeof ov.__mf_setSuccessState === 'function') {
+                  const ov = document.getElementById(
+                    "magic-fill-loading-overlay"
+                  )
+                  if (ov && typeof ov.__mf_setSuccessState === "function") {
                     ov.__mf_setSuccessState(true)
+                    // Call the new button state function here
+                    if (ov.__mf_updateButtonState)
+                      ov.__mf_updateButtonState("DONE") // <-- ADD THIS
                   } else {
-                    updateModal(true, 'Done', null, { success: true })
+                    updateModal(true, "Done", null, { success: true })
                   }
-                  const textEl = document.getElementById('magic-fill-loading-text')
-                  if (textEl) textEl.textContent = 'Done — form filled.'
+                  const textEl = document.getElementById(
+                    "magic-fill-loading-text"
+                  )
+                  if (textEl) textEl.textContent = "Done — form filled."
                 } catch (e) {}
                 break
               default:

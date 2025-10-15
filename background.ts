@@ -92,6 +92,10 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!tab?.id || info.menuItemId !== CONTEXT_ITEM_ID_FILE) return
   console.log("👆 Context menu item clicked. Injecting content script...")
+  chrome.scripting.insertCSS({
+    target: { tabId: tab.id },
+    files: ["script-file.css"]
+  })
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     files: ["script-file.js"]
