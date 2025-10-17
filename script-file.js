@@ -3,32 +3,22 @@
     console.log(`🖊️ Filling form with content: ${JSON.stringify(content)}`)
     let filledCount = 0
 
-    const overlay = document.getElementById("magic-fill-overlay")
     Object.keys(form.properties).forEach((item) => {
       const targetField =
         document.getElementById(item) ||
         document.querySelector(`[name="${item}"]`)
 
       if (!targetField) {
-        overlay &&
-          overlay.__mf_updateFieldFromDom &&
-          overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ Field not found in DOM: ${item}`)
         return
       }
       const value = content[item]
       if (value === undefined) {
-        overlay &&
-          overlay.__mf_updateFieldFromDom &&
-          overlay.__mf_updateFieldFromDom(item, false)
         console.log(`⚠️ No content for field: ${item}`)
         return
       }
       targetField.value = value
       filledCount++
-      overlay &&
-        overlay.__mf_updateFieldFromDom &&
-        overlay.__mf_updateFieldFromDom(item, true)
       targetField.dispatchEvent(new Event("input", { bubbles: true }))
       targetField.dispatchEvent(new Event("change", { bubbles: true }))
     })
@@ -77,7 +67,6 @@
     isVisible,
     message = "MagicFill: Loading...",
     fields = null,
-    options = {}
   ) {
     const OVERLAY_ID = "magic-fill-overlay"
     let overlay = document.getElementById(OVERLAY_ID)
@@ -138,6 +127,7 @@
     ></div>
     <div id="magic-fill-actions" class="mt-4 flex justify-end gap-3 w-full">
       <button
+        disabled
         id="magic-fill-btn-accept"
         type="button" 
         class="button primary-button"
@@ -161,6 +151,13 @@
         if (acceptBtn) {
           acceptBtn.addEventListener("click", () => {
             console.log("✅ User clicked 'Accept' button (Fill accepted).")
+            
+            try {
+              const count = fillForm(overlay.__mf_formSchema, overlay.__mf_formContent)
+              console.log(`✅ Form filled. ${count} field(s) updated.`)
+            } catch (e) {
+              console.warn("⚠️ Error filling form on DONE:", e)
+            }
             updateModal(false) // Closes the modal
           })
         }
@@ -201,7 +198,6 @@
         fields.length > 0 &&
         fieldsListEl
       ) {
-        // fieldsListEl.style.display = "block"
         fieldsListEl.innerHTML = ""
         fields.forEach((f) => {
           const li = document.createElement("div")
@@ -211,7 +207,7 @@
           li.innerHTML = `
               <div 
                 class="
-                  w-3 h-3 rounded-full border-2 border-gray-400 
+                  w-3 h-3 rounded-full border border-gray-400 
                   flex items-center justify-center 
                   font-bold text-xs leading-none text-white 
                   shrink-0 mr-2 magic-fill-dot
@@ -220,10 +216,10 @@
               ></div>
               
               <div 
-                  class="magic-fill-field-name text-xs truncate flex-grow min-w-0 -mt-px"
+                  class="magic-fill-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
               >
                   ${escapeHtml(f)}
-              </div>
+              </div>      
             `
           li.setAttribute("data-reported", "false")
           fieldsListEl.appendChild(li)
@@ -256,8 +252,6 @@
         }
         if (overlay.__mf_updateFieldFromAi)
           delete overlay.__mf_updateFieldFromAi
-        if (overlay.__mf_updateFieldFromDom)
-          delete overlay.__mf_updateFieldFromDom
         if (overlay.__mf_port) delete overlay.__mf_port
         if (overlay.__mf_total) delete overlay.__mf_total
         if (overlay.__mf_AiReportedCount) delete overlay.__mf_AiReportedCount
@@ -266,90 +260,73 @@
       document.documentElement.style.pointerEvents = ""
     }
 
-    function updateFieldFromDom(fieldName, filled) {
-      const overlayEl = document.getElementById(OVERLAY_ID)
-      if (!overlayEl) return
-      const li = overlayEl.querySelector(
-        `[data-field="${cssEscape(fieldName)}"]`
-      )
-      if (!li) return
-      const dot = li.querySelector(".magic-fill-dot")
-      if (!dot) return
-      dot.scrollIntoView({ block: "center", behavior: "smooth" })
-      if (filled) {
-        dot.classList.remove("bg-red-500", "bg-yellow-500")
-        dot.classList.add("bg-green-500")
-      } else {
-        dot.classList.remove("bg-green-500", "bg-red-500")
-        dot.classList.add("bg-yellow-500")
-      }
+function updateFieldFromAi(fieldName, fieldValue) {
+  const overlayEl = document.getElementById(OVERLAY_ID)
+  if (!overlayEl) return
 
-      try {
-        if (typeof overlayEl.__mf_DomReportedCount !== "number")
-          overlayEl.__mf_DomReportedCount = 0
-        if (typeof overlayEl.__mf_total !== "number")
-          overlayEl.__mf_total = overlayEl.querySelectorAll(
-            ".magic-fill-field-item"
-          ).length
-        if (filled) overlayEl.__mf_DomReportedCount++
-        const countEl = overlayEl.querySelector("#modal-secondary-message")
-        if (countEl)
-          countEl.textContent = `${overlayEl.__mf_DomReportedCount} / ${overlayEl.__mf_total} filled`
-      } catch (e) {}
-    }
+  const li = overlayEl.querySelector(
+    `[data-field="${cssEscape(fieldName)}"]`
+  )
+  if (!li) return
 
-    function updateFieldFromAi(fieldName, found) {
-      const overlayEl = document.getElementById(OVERLAY_ID)
-      if (!overlayEl) return
-      const li = overlayEl.querySelector(
-        `[data-field="${cssEscape(fieldName)}"]`
-      )
-      if (!li) return
-      const dot = li.querySelector(".magic-fill-dot")
-      if (!dot) return
-      dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
-      const prevReported = li.getAttribute("data-reported") === "true"
-      // set visual state for found / not-found
-      if (found) {
-        dot.classList.remove("bg-red-500", "bg-yellow-500")
-        dot.classList.add("bg-blue-500")
-      } else {
-        dot.classList.remove("bg-blue-500", "bg-yellow-500")
-        dot.classList.add("bg-red-500")
-      }
-      // mark as reported if it's the first report for this field
-      if (!prevReported) li.setAttribute("data-reported", "true")
+  const dot = li.querySelector(".magic-fill-dot")
+  if (!dot) return
 
-      // update reported counters on overlay
-      try {
-        if (typeof overlayEl.__mf_AiReportedCount !== "number")
-          overlayEl.__mf_AiReportedCount = 0
-        if (typeof overlayEl.__mf_total !== "number")
-          overlayEl.__mf_total = overlayEl.querySelectorAll(
-            ".magic-fill-field-item"
-          ).length
-        if (!prevReported) overlayEl.__mf_AiReportedCount++
-        const countEl = overlayEl.querySelector("#modal-secondary-message")
-        if (countEl)
-          countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
-      } catch (e) {}
-    }
+  dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
+
+  const prevReported = li.getAttribute("data-reported") === "true"
+
+  // === Update dot color ===
+  if (fieldValue) {
+    dot.classList.remove("bg-red-500", "bg-yellow-500")
+    dot.classList.add("bg-blue-500")
+  } else {
+    dot.classList.remove("bg-blue-500", "bg-yellow-500")
+    dot.classList.add("bg-red-500")
+  }
+
+  // === Update field value display ===
+  const nameEl = li.querySelector(".magic-fill-field-item-content")
+  if (nameEl) {
+    // Escape value safely for HTML
+    const safeValue = escapeHtml(fieldValue)
+    nameEl.innerHTML = `
+      <span>${escapeHtml(fieldName)}</span>
+      <span class="ml-1 text-gray-600">${safeValue}</span>
+    `
+  }
+
+  // === Mark as reported ===
+  if (!prevReported) li.setAttribute("data-reported", "true")
+
+  // === Update reported counters ===
+  try {
+    if (typeof overlayEl.__mf_AiReportedCount !== "number")
+      overlayEl.__mf_AiReportedCount = 0
+
+    if (typeof overlayEl.__mf_total !== "number")
+      overlayEl.__mf_total = overlayEl.querySelectorAll(
+        ".magic-fill-field-item"
+      ).length
+
+    if (!prevReported) overlayEl.__mf_AiReportedCount++
+
+    const countEl = overlayEl.querySelector("#modal-secondary-message")
+    if (countEl)
+      countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
+  } catch (e) {}
+}
+
 
     function updateButtonState(state) {
       const overlayEl = document.getElementById(OVERLAY_ID)
       if (!overlayEl) return
-
       const acceptBtn = overlayEl.querySelector("#magic-fill-btn-accept")
-      const cancelBtn = overlayEl.querySelector("#magic-fill-btn-cancel")
-
-      if (!acceptBtn || !cancelBtn) return
-
+      if (!acceptBtn) return
       if (state === "DONE") {
         acceptBtn.disabled = false
-        cancelBtn.disabled = true
       } else {
         acceptBtn.disabled = true
-        cancelBtn.disabled = false
       }
     }
 
@@ -366,15 +343,16 @@
 
     if (isVisible) {
       overlay.__mf_updateFieldFromAi = updateFieldFromAi
-      overlay.__mf_updateFieldFromDom = updateFieldFromDom
       overlay.__mf_setSuccessState = setSuccessState
       overlay.__mf_updateButtonState = updateButtonState
-    } else if (overlay && overlay.__mf_updateFieldFromAi) {
-      delete overlay.__mf_updateFieldFromAi
-      if (overlay.__mf_updateFieldFromDom)
-        delete overlay.__mf_updateFieldFromDom
+      overlay.__mf_formSchema = undefined
+      overlay.__mf_formContent = undefined
+    } else if (overlay) {
+      if (overlay.__mf_updateFieldFromAi) delete overlay.__mf_updateFieldFromAi
       if (overlay.__mf_setSuccessState) delete overlay.__mf_setSuccessState
       if (overlay.__mf_updateButtonState) delete overlay.__mf_updateButtonState
+      if (overlay.__mf_formSchema) delete overlay.__mf_formSchema
+      if (overlay.__mf_formContent) delete overlay.__mf_formContent
     }
   }
 
@@ -482,7 +460,6 @@
           const ovEl = document.getElementById("magic-fill-overlay")
           if (ovEl) {
             ovEl.__mf_port = port
-            // mark port as alive so the cancel handler can check before posting
             ovEl.__mf_portAlive = true
           }
 
@@ -511,33 +488,27 @@
                 updateModal(true, msg.content)
                 break
               case "UPDATE_FIELD_STATUS":
-                const overlay = document.getElementById(
+                const ov = document.getElementById(
                   "magic-fill-overlay"
                 )
-                if (overlay && overlay.__mf_updateFieldFromAi) {
-                  overlay.__mf_updateFieldFromAi(
+                if (ov) {
+                  ov.__mf_updateFieldFromAi(
                     msg.content.field,
-                    !!msg.content.found
+                    msg.content.value
                   )
                 }
                 break
               case "DONE":
                 try {
-                  const count = fillForm(form, msg.content || {})
-                  console.log(`✅ Form filled. ${count} field(s) updated.`)
-                } catch (e) {
-                  console.warn("⚠️ Error filling form on DONE:", e)
-                }
-                try {
-                  const ov = document.getElementById(
-                    "magic-fill-overlay"
-                  )
+                  const ov = document.getElementById("magic-fill-overlay")
                   if (ov && typeof ov.__mf_setSuccessState === "function") {
+                    ov.__mf_formSchema = form
+                    ov.__mf_formContent = msg.content
                     ov.__mf_setSuccessState(true)
                     if (ov.__mf_updateButtonState)
                       ov.__mf_updateButtonState("DONE")
                   } else {
-                    updateModal(true, "Done", null, { success: true })
+                    updateModal(true, "AI finished processing", null, { success: true })
                   }
                   const textEl = document.getElementById("modal-primary-message")
                   if (textEl) textEl.textContent = "Done"
@@ -563,26 +534,6 @@
     document.body.appendChild(input)
     input.click()
   }
-
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    console.log("📩 Message received in content script:", msg)
-    if (msg.action === "UPDATE_PROGRESS_MESSAGE") {
-      const textEl = document.getElementById("modal-primary-message")
-      if (textEl) textEl.textContent = msg.content
-      return
-    }
-
-    if (msg.action === "UPDATE_FIELD_STATUS") {
-      console.log(
-        `Field status update: ${msg.content.field} => ${msg.content.found}`
-      )
-      const overlay = document.getElementById("magic-fill-overlay")
-      if (overlay && overlay.__mf_updateFieldFromAi) {
-        overlay.__mf_updateFieldFromAi(msg.content.field, !!msg.content.found)
-      }
-      return
-    }
-  })
 
   openFileExplorer()
 

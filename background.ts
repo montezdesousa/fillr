@@ -24,7 +24,7 @@ interface UpdateProgressMessage {
 }
 interface UpdateFieldStatusMessage {
   action: Action.UPDATE_FIELD_STATUS
-  content: { field: string; found: boolean }
+  content: { field: string; value: "object" | "array" | "string" | "number" | "boolean" }
 }
 interface DoneMessage {
   action: Action.DONE
@@ -156,11 +156,11 @@ async function getFinalResult(
           }
           const hasValue = val !== null && val !== "" && val !== undefined
           const prev = reportedFields.get(k)
-          if (prev === undefined || prev !== hasValue) {
+          if (hasValue && (prev === undefined || prev !== hasValue)) {
             reportedFields.set(k, hasValue)
             sendMessage<UpdateFieldStatusMessage>(port, {
               action: Action.UPDATE_FIELD_STATUS,
-              content: { field: k, found: !!hasValue }
+              content: { field: k, value: val }
             })
           }
           finalResult[k] = val
@@ -181,18 +181,18 @@ async function getFinalResult(
             const hasValue = val !== null && val !== "" && val !== undefined
             const prev = reportedFields.get(k)
             // if field appears for the first time, report its state (true or false)
-            if (prev === undefined) {
+            if (prev === undefined && hasValue) {
               reportedFields.set(k, hasValue)
               sendMessage<UpdateFieldStatusMessage>(port, {
                 action: Action.UPDATE_FIELD_STATUS,
-                content: { field: k, found: !!hasValue }
+                content: { field: k, value: val }
               })
             } else if (!prev && hasValue) {
               // previously reported as not found, now found -> update
               reportedFields.set(k, true)
               sendMessage<UpdateFieldStatusMessage>(port, {
                 action: Action.UPDATE_FIELD_STATUS,
-                content: { field: k, found: true }
+                content: { field: k, value: val }
               })
             }
             finalResult[k] = val
@@ -219,17 +219,17 @@ async function getFinalResult(
         const val = parsed[k]
         const hasValue = val !== null && val !== "" && val !== undefined
         const prev = reportedFields.get(k)
-        if (prev === undefined) {
+        if (prev === undefined && hasValue) {
           reportedFields.set(k, hasValue)
           sendMessage<UpdateFieldStatusMessage>(port, {
             action: Action.UPDATE_FIELD_STATUS,
-            content: { field: k, found: !!hasValue }
+            content: { field: k, value: val }
           })
         } else if (!prev && hasValue) {
           reportedFields.set(k, true)
           sendMessage<UpdateFieldStatusMessage>(port, {
             action: Action.UPDATE_FIELD_STATUS,
-            content: { field: k, found: true }
+            content: { field: k, value: val }
           })
         }
         finalResult[k] = val
