@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 @layer components {
-  .magic-fill-list-container {
-    /* Base styles applied inline in JS, but we must define the scrollbar here */
-  }
 
-  .magic-fill-list-container::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-    background-color: transparent;
-  }
+  .magic-fill-list-container::-webkit-scrollbar {}
 
-  .magic-fill-list-container::-webkit-scrollbar-track {
-    @apply bg-gray-100/50 rounded-full;
-  }
+  .magic-fill-list-container::-webkit-scrollbar-track {}
 
   .magic-fill-list-container::-webkit-scrollbar-thumb {
-    @apply bg-gray-400/75 rounded-full border-2 border-transparent;
+    @apply bg-[#8B8B8B] rounded-full border-2 border-transparent;
     background-clip: padding-box;
   }
 
-  .magic-fill-list-container::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
+  .magic-fill-list-container::-webkit-scrollbar-thumb:hover {}
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    cursor: pointer;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    transition-property: background-color, color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(25, 84, 199, 0.3);
+  }
+
+  .primary-button {
+    background-color: #1954C7;
+    color: white;
+    border: none;
+  }
+
+  .primary-button:hover {
+    background-color: rgba(25, 84, 199, 0.8);
+  }
+
+  .secondary-button {
+    background-color: white;
+    color: #1954C7;
+    border: 1px solid #1954C7;
+  }
+
+  .secondary-button:hover {
+    background-color: rgba(139, 139, 139, 0.3);
   }
 }

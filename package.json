@@ -5,10 +5,11 @@
   "description": "An extension to magically fill online forms from files.",
   "author": "montezdesousa@gmail.com",
   "scripts": {
-    "dev": "plasmo dev",
+    "dev": "npm run copy-js && npm run tw:build && plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
-    "tw:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./build/chrome-mv3-dev/script-file.css"
+    "tw:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./build/chrome-mv3-dev/script-file.css --content './**/*.js'",
+    "copy-js": "cp script-file.js ./build/chrome-mv3-dev/"
   },
   "dependencies": {
     "plasmo": "0.90.5",

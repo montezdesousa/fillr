@@ -45,7 +45,7 @@
       'input:not([type="submit"]):not([type="hidden"]), textarea, select'
     )
     fields.forEach((field, index) => {
-      const fieldKey = field.id || field.name || `field_${index}`
+      const fieldKey = field.id || field.name
       if (fieldKey) {
         let labelText = ""
         const label = document.querySelector(`label[for="${field.id}"]`)
@@ -96,7 +96,7 @@
     <div id="magic-fill-loading-box" aria-hidden="false" 
       class="
         inline-flex flex-col items-start gap-3 w-96 p-5 
-        bg-white text-gray-800 rounded-xl shadow-2xl shadow-gray-700/50 
+        bg-white text-gray-800 shadow-2xl shadow-gray-700/50 
         font-sans
       "
     >
@@ -124,23 +124,20 @@
         "
       ></div>
       <div id="magic-fill-actions" aria-hidden="true" class="mt-4 flex justify-end gap-3 w-full">
-          <button id="magic-fill-btn-cancel" type="button" 
-              class="
-                  cursor-pointer px-4 py-2 text-sm font-medium rounded-lg text-gray-700 
-                  hover:bg-gray-100 transition-colors
-              "
-          >
-              Cancel
-          </button>
-          <button id="magic-fill-btn-ok" type="button" disabled 
-    class="
-        cursor-pointer px-4 py-2 text-sm font-medium rounded-lg 
-        bg-gray-300 text-gray-500 hover:bg-blue-700 
-        transition-colors
-    "
->
-    OK
-</button>
+        <button
+          id="magic-fill-btn-ok"
+          type="button" 
+          class="button primary-button"
+        >
+          OK
+        </button>
+        <button
+          id="magic-fill-btn-cancel"
+          type="button" 
+          class="button secondary-button"
+        >
+          Cancel
+        </button>
       </div>      
     </div>`
 
@@ -265,7 +262,7 @@
       if (!li) return
       const dot = li.querySelector(".magic-fill-dot")
       if (!dot) return
-      dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      dot.scrollIntoView({ block: "center", behavior: "smooth" })
       if (filled) {
         // SUCCESS: Apply Green background and border utilities
         dot.classList.remove(
@@ -353,47 +350,27 @@
       } catch (e) {}
     }
 
-// helper to manage OK/Cancel button states
-function updateButtonState(state) {
-    const overlayEl = document.getElementById(OVERLAY_ID)
-    if (!overlayEl) return
-    
-    // Note: actionsEl is not strictly needed here but can be if you want to show/hide the container.
-    // const actionsEl = overlayEl.querySelector('#magic-fill-actions')
-    
-    const okBtn = overlayEl.querySelector('#magic-fill-btn-ok')
-    const cancelBtn = overlayEl.querySelector('#magic-fill-btn-cancel')
+    // helper to manage OK/Cancel button states
+    function updateButtonState(state) {
+      const overlayEl = document.getElementById(OVERLAY_ID)
+      if (!overlayEl) return
 
-    if (!okBtn || !cancelBtn) return
-    
-    // Classes to manually swap:
-    const ACTIVE_COLORS = ["bg-blue-600", "hover:bg-blue-700"];
-    const INACTIVE_COLORS = ["bg-gray-300", "text-gray-500"]; // Manually derived from disabled: styles
+      // Note: actionsEl is not strictly needed here but can be if you want to show/hide the container.
+      // const actionsEl = overlayEl.querySelector('#magic-fill-actions')
 
-    if (state === 'DONE') {
-        // --- STATE: DONE (OK Enabled) ---
-        
-        // 1. Enable OK button and Disable Cancel button
-        okBtn.disabled = false;
-        cancelBtn.disabled = true;
-        
-        // 2. Add ACTIVE colors (blue) and REMOVE INACTIVE colors (gray)
-        okBtn.classList.add(...ACTIVE_COLORS);
-        okBtn.classList.remove(...INACTIVE_COLORS);
-        
-    } else {
-        // --- STATE: LOADING (OK Disabled) ---
-        
-        // 1. Disable OK button and Enable Cancel button
-        okBtn.disabled = true;
-        cancelBtn.disabled = false;
-        
-        // 2. Remove ACTIVE colors (blue) and ADD INACTIVE colors (gray)
-        // This ensures the button *looks* disabled when it is disabled.
-        okBtn.classList.remove(...ACTIVE_COLORS);
-        okBtn.classList.add(...INACTIVE_COLORS);
+      const okBtn = overlayEl.querySelector("#magic-fill-btn-ok")
+      const cancelBtn = overlayEl.querySelector("#magic-fill-btn-cancel")
+
+      if (!okBtn || !cancelBtn) return
+
+      if (state === "DONE") {
+        okBtn.disabled = false
+        cancelBtn.disabled = true
+      } else {
+        okBtn.disabled = true
+        cancelBtn.disabled = false
+      }
     }
-}
     // expose a small API to toggle success state
     function setSuccessState(enabled) {
       const overlayEl = document.getElementById(OVERLAY_ID)
