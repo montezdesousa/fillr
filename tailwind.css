@@ -2,16 +2,10 @@
 
 @layer components {
 
-  .magic-fill-list-container::-webkit-scrollbar {}
-
-  .magic-fill-list-container::-webkit-scrollbar-track {}
-
   .magic-fill-list-container::-webkit-scrollbar-thumb {
     @apply bg-[#8B8B8B] rounded-full border-2 border-transparent;
     background-clip: padding-box;
   }
-
-  .magic-fill-list-container::-webkit-scrollbar-thumb:hover {}
 
   .button {
     display: inline-flex;
