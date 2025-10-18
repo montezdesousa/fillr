@@ -1,4 +1,69 @@
 ;(function () {
+  const MODAL_HTML = `
+<div id="magic-fill-loading-box" aria-hidden="false" 
+  class="
+    inline-flex flex-col items-start gap-3 w-96 p-5 
+    bg-white text-gray-800 shadow-2xl shadow-gray-700/50 
+    font-sans
+  "
+>
+  <div class="flex items-center w-full gap-3">
+      <div class="relative w-8 h-8 flex items-center justify-center">
+        <!-- Spinner + center icon -->
+        <div class="magic-fill-spinner flex w-full h-full relative">
+          <svg class="animate-[spin_0.5s_linear_infinite] absolute w-full h-full" viewBox="0 0 32 32">
+            <circle class="stroke-gray-200" cx="16" cy="16" r="14" fill="none" stroke-width="2"></circle>
+            <circle 
+                cx="16" 
+                cy="16" 
+                r="14" 
+                fill="none"
+                stroke="#4893FC"
+                stroke-linecap="round" 
+                stroke-dasharray="28 60">
+            </circle>
+          </svg>
+          <svg
+            class="z-10 absolute inset-0 m-auto" width="16" height="16"
+            fill="none" xmlns="http://www.w3.org/2000/svg"
+            //viewBox="0 0 65 65"
+            style="display: block;"
+          ><mask id="maskme" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="65" height="65"><path d="M32.447 0c.68 0 1.273.465 1.439 1.125a38.904 38.904 0 001.999 5.905c2.152 5 5.105 9.376 8.854 13.125 3.751 3.75 8.126 6.703 13.125 8.855a38.98 38.98 0 005.906 1.999c.66.166 1.124.758 1.124 1.438 0 .68-.464 1.273-1.125 1.439a38.902 38.902 0 00-5.905 1.999c-5 2.152-9.375 5.105-13.125 8.854-3.749 3.751-6.702 8.126-8.854 13.125a38.973 38.973 0 00-2 5.906 1.485 1.485 0 01-1.438 1.124c-.68 0-1.272-.464-1.438-1.125a38.913 38.913 0 00-2-5.905c-2.151-5-5.103-9.375-8.854-13.125-3.75-3.749-8.125-6.702-13.125-8.854a38.973 38.973 0 00-5.905-2A1.485 1.485 0 010 32.448c0-.68.465-1.272 1.125-1.438a38.903 38.903 0 005.905-2c5-2.151 9.376-5.104 13.125-8.854 3.75-3.749 6.703-8.125 8.855-13.125a38.972 38.972 0 001.999-5.905A1.485 1.485 0 0132.447 0z" fill="#000"/><path d="M32.447 0c.68 0 1.273.465 1.439 1.125a38.904 38.904 0 001.999 5.905c2.152 5 5.105 9.376 8.854 13.125 3.751 3.75 8.126 6.703 13.125 8.855a38.98 38.98 0 005.906 1.999c.66.166 1.124.758 1.124 1.438 0 .68-.464 1.273-1.125 1.439a38.902 38.902 0 00-5.905 1.999c-5 2.152-9.375 5.105-13.125 8.854-3.749 3.751-6.702 8.126-8.854 13.125a38.973 38.973 0 00-2 5.906 1.485 1.485 0 01-1.438 1.124c-.68 0-1.272-.464-1.438-1.125a38.913 38.913 0 00-2-5.905c-2.151-5-5.103-9.375-8.854-13.125-3.75-3.749-8.125-6.702-13.125-8.854a38.973 38.973 0 00-5.905-2A1.485 1.485 0 010 32.448c0-.68.465-1.272 1.125-1.438a38.903 38.903 0 005.905-2c5-2.151 9.376-5.104 13.125-8.854 3.75-3.749 6.703-8.125 8.855-13.125a38.972 38.972 0 001.999-5.905A1.485 1.485 0 0132.447 0z" fill="url(#prefix__paint0_linear_2001_67)"/></mask><g mask="url(#maskme)"><g filter="url(#prefix__filter0_f_2001_67)"><path d="M-5.859 50.734c7.498 2.663 16.116-2.33 19.249-11.152 3.133-8.821-.406-18.131-7.904-20.794-7.498-2.663-16.116 2.33-19.25 11.151-3.132 8.822.407 18.132 7.905 20.795z" fill="#FFE432"/></g><g filter="url(#prefix__filter1_f_2001_67)"><path d="M27.433 21.649c10.3 0 18.651-8.535 18.651-19.062 0-10.528-8.35-19.062-18.651-19.062S8.78-7.94 8.78 2.587c0 10.527 8.35 19.062 18.652 19.062z" fill="#FC413D"/></g><g filter="url(#prefix__filter2_f_2001_67)"><path d="M20.184 82.608c10.753-.525 18.918-12.244 18.237-26.174-.68-13.93-9.95-24.797-20.703-24.271C6.965 32.689-1.2 44.407-.519 58.337c.681 13.93 9.95 24.797 20.703 24.271z" fill="#00B95C"/></g><g filter="url(#prefix__filter3_f_2001_67)"><path d="M20.184 82.608c10.753-.525 18.918-12.244 18.237-26.174-.68-13.93-9.95-24.797-20.703-24.271C6.965 32.689-1.2 44.407-.519 58.337c.681 13.93 9.95 24.797 20.703 24.271z" fill="#00B95C"/></g><g filter="url(#prefix__filter4_f_2001_67)"><path d="M30.954 74.181c9.014-5.485 11.427-17.976 5.389-27.9-6.038-9.925-18.241-13.524-27.256-8.04-9.015 5.486-11.428 17.977-5.39 27.902 6.04 9.924 18.242 13.523 27.257 8.038z" fill="#00B95C"/></g><g filter="url(#prefix__filter5_f_2001_67)"><path d="M67.391 42.993c10.132 0 18.346-7.91 18.346-17.666 0-9.757-8.214-17.667-18.346-17.667s-18.346 7.91-18.346 17.667c0 9.757 8.214 17.666 18.346 17.666z" fill="#3186FF"/></g><g filter="url(#prefix__filter6_f_2001_67)"><path d="M-13.065 40.944c9.33 7.094 22.959 4.869 30.442-4.972 7.483-9.84 5.987-23.569-3.343-30.663C4.704-1.786-8.924.439-16.408 10.28c-7.483 9.84-5.986 23.57 3.343 30.664z" fill="#FBBC04"/></g><g filter="url(#prefix__filter7_f_2001_67)"><path d="M34.74 51.43c11.135 7.656 25.896 5.524 32.968-4.764 7.073-10.287 3.779-24.832-7.357-32.488C49.215 6.52 34.455 8.654 27.382 18.94c-7.072 10.288-3.779 24.833 7.357 32.49z" fill="#3186FF"/></g><g filter="url(#prefix__filter8_f_2001_67)"><path d="M54.984-2.336c2.833 3.852-.808 11.34-8.131 16.727-7.324 5.387-15.557 6.631-18.39 2.78-2.833-3.853.807-11.342 8.13-16.728 7.324-5.387 15.558-6.631 18.39-2.78z" fill="#749BFF"/></g><g filter="url(#prefix__filter9_f_2001_67)"><path d="M31.727 16.104C43.053 5.598 46.94-8.626 40.41-15.666c-6.53-7.04-21.006-4.232-32.332 6.274s-15.214 24.73-8.683 31.77c6.53 7.04 21.006 4.232 32.332-6.274z" fill="#FC413D"/></g><g filter="url(#prefix__filter10_f_2001_67)"><path d="M8.51 53.838c6.732 4.818 14.46 5.55 17.262 1.636 2.802-3.915-.384-10.994-7.116-15.812-6.731-4.818-14.46-5.55-17.261-1.636-2.802 3.915.383 10.994 7.115 15.812z" fill="#FFEE48"/></g></g><defs><filter id="prefix__filter0_f_2001_67" x="-19.824" y="13.152" width="39.274" height="43.217" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="2.46" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter1_f_2001_67" x="-15.001" y="-40.257" width="84.868" height="85.688" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="11.891" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter2_f_2001_67" x="-20.776" y="11.927" width="79.454" height="90.916" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter3_f_2001_67" x="-20.776" y="11.927" width="79.454" height="90.916" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter4_f_2001_67" x="-19.845" y="15.459" width="79.731" height="81.505" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter5_f_2001_67" x="29.832" y="-11.552" width="75.117" height="73.758" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="9.606" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter6_f_2001_67" x="-38.583" y="-16.253" width="78.135" height="78.758" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="8.706" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter7_f_2001_67" x="8.107" y="-5.966" width="78.877" height="77.539" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="7.775" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter8_f_2001_67" x="13.587" y="-18.488" width="56.272" height="51.81" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="6.957" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter9_f_2001_67" x="-15.526" y="-31.297" width="70.856" height="69.306" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="5.876" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter10_f_2001_67" x="-14.168" y="20.964" width="55.501" height="51.571" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="7.273" result="effect1_foregroundBlur_2001_67"/></filter><linearGradient id="prefix__paint0_linear_2001_67" x1="18.447" y1="43.42" x2="52.153" y2="15.004" gradientUnits="userSpaceOnUse"><stop stop-color="#4893FC"/><stop offset=".27" stop-color="#4893FC"/><stop offset=".777" stop-color="#969DFF"/><stop offset="1" stop-color="#BD99FE"/></linearGradient></defs></svg>
+        </div>
+        <!-- Success icon (hidden initially) -->
+        <svg class="magic-fill-success absolute w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>
+      </div>
+      <div id="modal-primary-message" class="text-s truncate flex-grow min-w-0 font-medium text-gray-700"></div>        
+    </div>
+  
+    <div id="modal-secondary-message" class="mt-2 ml-2 font-semibold text-xs text-gray-600"></div>
+  
+    <div id="magic-fill-fields-list" aria-hidden="false"
+      class="
+        w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
+        flex flex-col gap-y-2
+        magic-fill-list-container
+      "
+    ></div>
+    <div id="magic-fill-actions" class="mt-4 flex justify-end gap-3 w-full">
+      <button
+        disabled
+        id="magic-fill-btn-accept"
+        type="button" 
+        class="button primary-button"
+      >
+        Accept
+      </button>
+      <button
+        id="magic-fill-btn-cancel"
+        type="button" 
+        class="button secondary-button"
+      >
+        Cancel
+      </button>
+    </div>      
+</div>`
+
   function fillForm(form, content) {
     console.log(`🖊️ Filling form with content: ${JSON.stringify(content)}`)
     let filledCount = 0
@@ -61,299 +126,6 @@
       }
     })
     return schema
-  }
-
-  function updateModal(
-    isVisible,
-    message = "MagicFill: Loading...",
-    fields = null,
-  ) {
-    const OVERLAY_ID = "magic-fill-overlay"
-    let overlay = document.getElementById(OVERLAY_ID)
-
-    if (isVisible) {
-      if (!overlay) {
-        overlay = document.createElement("div")
-        overlay.id = OVERLAY_ID
-        overlay.setAttribute("role", "status")
-        overlay.setAttribute("aria-live", "polite")
-
-        overlay.className =
-          "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
-
-        overlay.innerHTML = `
-<div id="magic-fill-loading-box" aria-hidden="false" 
-  class="
-    inline-flex flex-col items-start gap-3 w-96 p-5 
-    bg-white text-gray-800 shadow-2xl shadow-gray-700/50 
-    font-sans
-  "
->
-  <div class="flex items-center w-full gap-3">
-      <div class="relative w-8 h-8 flex items-center justify-center">
-        <!-- Spinner + center icon -->
-        <div class="magic-fill-spinner flex w-full h-full relative">
-          <svg class="animate-[spin_0.5s_linear_infinite] absolute w-full h-full" viewBox="0 0 32 32">
-            <defs>
-              <linearGradient id="prefix__paint0_linear_2001_67" x1="18.447" y1="43.42" x2="52.153" y2="15.004" gradientUnits="userSpaceOnUse"><stop stop-color="#4893FC"/><stop offset=".27" stop-color="#4893FC"/><stop offset=".777" stop-color="#969DFF"/><stop offset="1" stop-color="#BD99FE"/></linearGradient>
-            </defs>
-            <circle class="stroke-gray-200" cx="16" cy="16" r="14" fill="none" stroke-width="2"></circle>
-            <circle 
-                cx="16" 
-                cy="16" 
-                r="14" 
-                fill="none" 
-                stroke="url(#prefix__paint0_linear_2001_67)" stroke-width="2.6" 
-                stroke-linecap="round" 
-                stroke-dasharray="28 60">
-            </circle>
-          </svg>
-          <svg class="w-4 h-4 z-10 absolute inset-0 m-auto" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 65"><mask id="maskme" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="65" height="65"><path d="M32.447 0c.68 0 1.273.465 1.439 1.125a38.904 38.904 0 001.999 5.905c2.152 5 5.105 9.376 8.854 13.125 3.751 3.75 8.126 6.703 13.125 8.855a38.98 38.98 0 005.906 1.999c.66.166 1.124.758 1.124 1.438 0 .68-.464 1.273-1.125 1.439a38.902 38.902 0 00-5.905 1.999c-5 2.152-9.375 5.105-13.125 8.854-3.749 3.751-6.702 8.126-8.854 13.125a38.973 38.973 0 00-2 5.906 1.485 1.485 0 01-1.438 1.124c-.68 0-1.272-.464-1.438-1.125a38.913 38.913 0 00-2-5.905c-2.151-5-5.103-9.375-8.854-13.125-3.75-3.749-8.125-6.702-13.125-8.854a38.973 38.973 0 00-5.905-2A1.485 1.485 0 010 32.448c0-.68.465-1.272 1.125-1.438a38.903 38.903 0 005.905-2c5-2.151 9.376-5.104 13.125-8.854 3.75-3.749 6.703-8.125 8.855-13.125a38.972 38.972 0 001.999-5.905A1.485 1.485 0 0132.447 0z" fill="#000"/><path d="M32.447 0c.68 0 1.273.465 1.439 1.125a38.904 38.904 0 001.999 5.905c2.152 5 5.105 9.376 8.854 13.125 3.751 3.75 8.126 6.703 13.125 8.855a38.98 38.98 0 005.906 1.999c.66.166 1.124.758 1.124 1.438 0 .68-.464 1.273-1.125 1.439a38.902 38.902 0 00-5.905 1.999c-5 2.152-9.375 5.105-13.125 8.854-3.749 3.751-6.702 8.126-8.854 13.125a38.973 38.973 0 00-2 5.906 1.485 1.485 0 01-1.438 1.124c-.68 0-1.272-.464-1.438-1.125a38.913 38.913 0 00-2-5.905c-2.151-5-5.103-9.375-8.854-13.125-3.75-3.749-8.125-6.702-13.125-8.854a38.973 38.973 0 00-5.905-2A1.485 1.485 0 010 32.448c0-.68.465-1.272 1.125-1.438a38.903 38.903 0 005.905-2c5-2.151 9.376-5.104 13.125-8.854 3.75-3.749 6.703-8.125 8.855-13.125a38.972 38.972 0 001.999-5.905A1.485 1.485 0 0132.447 0z" fill="url(#prefix__paint0_linear_2001_67)"/></mask><g mask="url(#maskme)"><g filter="url(#prefix__filter0_f_2001_67)"><path d="M-5.859 50.734c7.498 2.663 16.116-2.33 19.249-11.152 3.133-8.821-.406-18.131-7.904-20.794-7.498-2.663-16.116 2.33-19.25 11.151-3.132 8.822.407 18.132 7.905 20.795z" fill="#FFE432"/></g><g filter="url(#prefix__filter1_f_2001_67)"><path d="M27.433 21.649c10.3 0 18.651-8.535 18.651-19.062 0-10.528-8.35-19.062-18.651-19.062S8.78-7.94 8.78 2.587c0 10.527 8.35 19.062 18.652 19.062z" fill="#FC413D"/></g><g filter="url(#prefix__filter2_f_2001_67)"><path d="M20.184 82.608c10.753-.525 18.918-12.244 18.237-26.174-.68-13.93-9.95-24.797-20.703-24.271C6.965 32.689-1.2 44.407-.519 58.337c.681 13.93 9.95 24.797 20.703 24.271z" fill="#00B95C"/></g><g filter="url(#prefix__filter3_f_2001_67)"><path d="M20.184 82.608c10.753-.525 18.918-12.244 18.237-26.174-.68-13.93-9.95-24.797-20.703-24.271C6.965 32.689-1.2 44.407-.519 58.337c.681 13.93 9.95 24.797 20.703 24.271z" fill="#00B95C"/></g><g filter="url(#prefix__filter4_f_2001_67)"><path d="M30.954 74.181c9.014-5.485 11.427-17.976 5.389-27.9-6.038-9.925-18.241-13.524-27.256-8.04-9.015 5.486-11.428 17.977-5.39 27.902 6.04 9.924 18.242 13.523 27.257 8.038z" fill="#00B95C"/></g><g filter="url(#prefix__filter5_f_2001_67)"><path d="M67.391 42.993c10.132 0 18.346-7.91 18.346-17.666 0-9.757-8.214-17.667-18.346-17.667s-18.346 7.91-18.346 17.667c0 9.757 8.214 17.666 18.346 17.666z" fill="#3186FF"/></g><g filter="url(#prefix__filter6_f_2001_67)"><path d="M-13.065 40.944c9.33 7.094 22.959 4.869 30.442-4.972 7.483-9.84 5.987-23.569-3.343-30.663C4.704-1.786-8.924.439-16.408 10.28c-7.483 9.84-5.986 23.57 3.343 30.664z" fill="#FBBC04"/></g><g filter="url(#prefix__filter7_f_2001_67)"><path d="M34.74 51.43c11.135 7.656 25.896 5.524 32.968-4.764 7.073-10.287 3.779-24.832-7.357-32.488C49.215 6.52 34.455 8.654 27.382 18.94c-7.072 10.288-3.779 24.833 7.357 32.49z" fill="#3186FF"/></g><g filter="url(#prefix__filter8_f_2001_67)"><path d="M54.984-2.336c2.833 3.852-.808 11.34-8.131 16.727-7.324 5.387-15.557 6.631-18.39 2.78-2.833-3.853.807-11.342 8.13-16.728 7.324-5.387 15.558-6.631 18.39-2.78z" fill="#749BFF"/></g><g filter="url(#prefix__filter9_f_2001_67)"><path d="M31.727 16.104C43.053 5.598 46.94-8.626 40.41-15.666c-6.53-7.04-21.006-4.232-32.332 6.274s-15.214 24.73-8.683 31.77c6.53 7.04 21.006 4.232 32.332-6.274z" fill="#FC413D"/></g><g filter="url(#prefix__filter10_f_2001_67)"><path d="M8.51 53.838c6.732 4.818 14.46 5.55 17.262 1.636 2.802-3.915-.384-10.994-7.116-15.812-6.731-4.818-14.46-5.55-17.261-1.636-2.802 3.915.383 10.994 7.115 15.812z" fill="#FFEE48"/></g></g><defs><filter id="prefix__filter0_f_2001_67" x="-19.824" y="13.152" width="39.274" height="43.217" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="2.46" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter1_f_2001_67" x="-15.001" y="-40.257" width="84.868" height="85.688" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="11.891" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter2_f_2001_67" x="-20.776" y="11.927" width="79.454" height="90.916" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter3_f_2001_67" x="-20.776" y="11.927" width="79.454" height="90.916" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter4_f_2001_67" x="-19.845" y="15.459" width="79.731" height="81.505" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10.109" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter5_f_2001_67" x="29.832" y="-11.552" width="75.117" height="73.758" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="9.606" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter6_f_2001_67" x="-38.583" y="-16.253" width="78.135" height="78.758" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="8.706" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter7_f_2001_67" x="8.107" y="-5.966" width="78.877" height="77.539" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="7.775" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter8_f_2001_67" x="13.587" y="-18.488" width="56.272" height="51.81" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="6.957" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter9_f_2001_67" x="-15.526" y="-31.297" width="70.856" height="69.306" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="5.876" result="effect1_foregroundBlur_2001_67"/></filter><filter id="prefix__filter10_f_2001_67" x="-14.168" y="20.964" width="55.501" height="51.571" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="7.273" result="effect1_foregroundBlur_2001_67"/></filter><linearGradient id="prefix__paint0_linear_2001_67" x1="18.447" y1="43.42" x2="52.153" y2="15.004" gradientUnits="userSpaceOnUse"><stop stop-color="#4893FC"/><stop offset=".27" stop-color="#4893FC"/><stop offset=".777" stop-color="#969DFF"/><stop offset="1" stop-color="#BD99FE"/></linearGradient></defs></svg>
-        </div>
-        <!-- Success icon (hidden initially) -->
-        <svg class="magic-fill-success absolute hidden w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>
-      </div>
-      <div id="modal-primary-message" class="text-s truncate flex-grow min-w-0 font-medium text-gray-700"></div>        
-    </div>
-  
-    <div id="modal-secondary-message" class="mt-2 ml-2 font-semibold text-xs text-gray-600"></div>
-  
-    <div id="magic-fill-fields-list" aria-hidden="false"
-      class="
-        w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
-        flex flex-col gap-y-2
-        magic-fill-list-container
-      "
-    ></div>
-    <div id="magic-fill-actions" class="mt-4 flex justify-end gap-3 w-full">
-      <button
-        disabled
-        id="magic-fill-btn-accept"
-        type="button" 
-        class="button primary-button"
-      >
-        Accept
-      </button>
-      <button
-        id="magic-fill-btn-cancel"
-        type="button" 
-        class="button secondary-button"
-      >
-        Cancel
-      </button>
-    </div>      
-</div>`
-
-        document.body.appendChild(overlay)
-        const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
-        const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
-
-        if (acceptBtn) {
-          acceptBtn.addEventListener("click", () => {
-            console.log("✅ User clicked 'Accept' button (Fill accepted).")
-            
-            try {
-              const count = fillForm(overlay.__mf_formSchema, overlay.__mf_formContent)
-              console.log(`✅ Form filled. ${count} field(s) updated.`)
-            } catch (e) {
-              console.warn("⚠️ Error filling form on DONE:", e)
-            }
-            updateModal(false) // Closes the modal
-          })
-        }
-
-        if (cancelBtn) {
-          cancelBtn.addEventListener("click", () => {
-            // ... (Keep your existing Cancel button logic here) ...
-            // Your existing logic for posting CANCEL and calling updateModal(false)
-            console.log("❌ User clicked Cancel button.")
-            const ov = document.getElementById(OVERLAY_ID)
-            // ... (rest of the existing CANCEL logic) ...
-            if (ov && ov.__mf_port && ov.__mf_portAlive) {
-              try {
-                if (typeof ov.__mf_port.postMessage === "function") {
-                  ov.__mf_port.postMessage({ action: "CANCEL" })
-                }
-              } catch (e) {
-                console.warn("⚠️ Failed to post CANCEL on port", e)
-              }
-            }
-            try {
-              updateModal(false)
-            } catch (e) {
-              const overlayEl = document.getElementById(OVERLAY_ID)
-              if (overlayEl) overlayEl.style.display = "none"
-              document.documentElement.style.pointerEvents = ""
-            }
-          })
-        }
-      }
-      const textEl = document.getElementById("modal-primary-message")
-      if (textEl) textEl.textContent = message
-
-      const fieldsListEl = document.getElementById("magic-fill-fields-list")
-      if (
-        fields &&
-        Array.isArray(fields) &&
-        fields.length > 0 &&
-        fieldsListEl
-      ) {
-        fieldsListEl.innerHTML = ""
-        fields.forEach((f) => {
-          const li = document.createElement("div")
-          li.className = "magic-fill-field-item flex items-center py-1"
-          li.setAttribute("data-field", f)
-          li.setAttribute("role", "listitem")
-          li.innerHTML = `
-              <div 
-                class="
-                  w-3 h-3 rounded-full border border-gray-400 
-                  flex items-center justify-center 
-                  font-bold text-xs leading-none text-white 
-                  shrink-0 mr-2 magic-fill-dot
-                " 
-                aria-hidden="true"
-              ></div>
-              
-              <div 
-                  class="magic-fill-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
-              >
-                  ${escapeHtml(f)}
-              </div>      
-            `
-          li.setAttribute("data-reported", "false")
-          fieldsListEl.appendChild(li)
-        })
-        updateButtonState("LOADING")
-        // initialize counters (reported / total)
-        try {
-          overlay.__mf_total = fields.length
-          overlay.__mf_AiReportedCount = 0
-          overlay.__mf_DomReportedCount = 0
-          const countEl = document.getElementById("modal-secondary-message")
-          if (countEl) countEl.textContent = `0 / ${overlay.__mf_total}`
-        } catch (e) {}
-      }
-
-      overlay.style.display = "flex"
-      // prevent accidental clicks while loading
-      document.documentElement.style.pointerEvents = "none"
-      overlay.style.pointerEvents = "auto" // allow interaction with overlay (if needed)
-    } else {
-      if (overlay) {
-        overlay.style.display = "none"
-        if (
-          overlay.__mf_port &&
-          typeof overlay.__mf_port.disconnect === "function"
-        ) {
-          try {
-            overlay.__mf_port.disconnect()
-          } catch (e) {}
-        }
-        if (overlay.__mf_updateFieldFromAi)
-          delete overlay.__mf_updateFieldFromAi
-        if (overlay.__mf_port) delete overlay.__mf_port
-        if (overlay.__mf_total) delete overlay.__mf_total
-        if (overlay.__mf_AiReportedCount) delete overlay.__mf_AiReportedCount
-        if (overlay.__mf_DomReportedCount) delete overlay.__mf_DomReportedCount
-      }
-      document.documentElement.style.pointerEvents = ""
-    }
-
-function updateFieldFromAi(fieldName, fieldValue) {
-  const overlayEl = document.getElementById(OVERLAY_ID)
-  if (!overlayEl) return
-
-  const li = overlayEl.querySelector(
-    `[data-field="${cssEscape(fieldName)}"]`
-  )
-  if (!li) return
-
-  const dot = li.querySelector(".magic-fill-dot")
-  if (!dot) return
-
-  dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
-
-  const prevReported = li.getAttribute("data-reported") === "true"
-
-  // === Update dot color ===
-  if (fieldValue) {
-    dot.classList.remove("bg-red-500", "bg-yellow-500")
-    dot.classList.add("bg-blue-500")
-  } else {
-    dot.classList.remove("bg-blue-500", "bg-yellow-500")
-    dot.classList.add("bg-red-500")
-  }
-
-  // === Update field value display ===
-  const nameEl = li.querySelector(".magic-fill-field-item-content")
-  if (nameEl) {
-    // Escape value safely for HTML
-    const safeValue = escapeHtml(fieldValue)
-    nameEl.innerHTML = `
-      <span>${escapeHtml(fieldName)}</span>
-      <span class="ml-1 text-gray-600">${safeValue}</span>
-    `
-  }
-
-  // === Mark as reported ===
-  if (!prevReported) li.setAttribute("data-reported", "true")
-
-  // === Update reported counters ===
-  try {
-    if (typeof overlayEl.__mf_AiReportedCount !== "number")
-      overlayEl.__mf_AiReportedCount = 0
-
-    if (typeof overlayEl.__mf_total !== "number")
-      overlayEl.__mf_total = overlayEl.querySelectorAll(
-        ".magic-fill-field-item"
-      ).length
-
-    if (!prevReported) overlayEl.__mf_AiReportedCount++
-
-    const countEl = overlayEl.querySelector("#modal-secondary-message")
-    if (countEl)
-      countEl.textContent = `${overlayEl.__mf_AiReportedCount} / ${overlayEl.__mf_total} found`
-  } catch (e) {}
-}
-
-
-    function updateButtonState(state) {
-      const overlayEl = document.getElementById(OVERLAY_ID)
-      if (!overlayEl) return
-      const acceptBtn = overlayEl.querySelector("#magic-fill-btn-accept")
-      if (!acceptBtn) return
-      if (state === "DONE") {
-        acceptBtn.disabled = false
-      } else {
-        acceptBtn.disabled = true
-      }
-    }
-
-    function setSuccessState(enabled) {
-      const overlayEl = document.getElementById(OVERLAY_ID);
-      if (!overlayEl) return;
-
-      const spinner = overlayEl.querySelector(".magic-fill-spinner");
-      const success = overlayEl.querySelector(".magic-fill-success");
-
-      if (spinner) spinner.classList.toggle("hidden", enabled);
-      if (success) success.classList.toggle("hidden", !enabled);
-    }
-
-    if (isVisible) {
-      overlay.__mf_updateFieldFromAi = updateFieldFromAi
-      overlay.__mf_setSuccessState = setSuccessState
-      overlay.__mf_updateButtonState = updateButtonState
-      overlay.__mf_formSchema = undefined
-      overlay.__mf_formContent = undefined
-    } else if (overlay) {
-      if (overlay.__mf_updateFieldFromAi) delete overlay.__mf_updateFieldFromAi
-      if (overlay.__mf_setSuccessState) delete overlay.__mf_setSuccessState
-      if (overlay.__mf_updateButtonState) delete overlay.__mf_updateButtonState
-      if (overlay.__mf_formSchema) delete overlay.__mf_formSchema
-      if (overlay.__mf_formContent) delete overlay.__mf_formContent
-    }
   }
 
   function fileToArrayBuffer(file) {
@@ -422,7 +194,324 @@ function updateFieldFromAi(fieldName, fieldValue) {
     })
   }
 
-  function openFileExplorer() {
+  const MagicFillModal = (() => {
+    const OVERLAY_ID = "magic-fill-overlay"
+    let overlay = null
+
+    // --- CREATE ---
+    function createModal() {
+      if (overlay) return overlay
+
+      overlay = document.createElement("div")
+      overlay.id = OVERLAY_ID
+      overlay.setAttribute("role", "status")
+      overlay.setAttribute("aria-live", "polite")
+      overlay.className =
+        "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
+      overlay.innerHTML = MODAL_HTML
+      document.body.appendChild(overlay)
+
+      // Accept / Cancel button setup
+      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
+      const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
+
+      if (acceptBtn) {
+        acceptBtn.addEventListener("click", () => {
+          try {
+            const count = fillForm(
+              overlay.__mf_formSchema,
+              overlay.__mf_formContent
+            )
+            console.log(`✅ Form filled. ${count} field(s) updated.`)
+          } catch (e) {
+            console.warn("⚠️ Error filling form on DONE:", e)
+          }
+          api.close()
+        })
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+          console.log("❌ User clicked Cancel button.")
+          resetModalState()
+        })
+      }
+
+      overlay.style.display = "none"
+      return overlay
+    }
+
+    function resetModalState() {
+      if (!overlay) return
+
+      // Cancel running port if alive
+      if (overlay.__mf_port) {
+        try {
+          overlay.__mf_port.postMessage({ action: "CANCEL" })
+        } catch {
+        } finally {
+          overlay.__mf_port.disconnect()
+        }
+      }
+
+      // Remove port references
+      delete overlay.__mf_port
+
+      // Reset form & fields state
+      overlay.__mf_lastFields = null
+      overlay.__mf_formSchema = null
+      overlay.__mf_formContent = null
+      overlay.__mf_total = 0
+      overlay.__mf_AiReportedCount = 0
+
+      // Clear fields in DOM
+      const fieldsListEl = overlay.querySelector("#magic-fill-fields-list")
+      if (fieldsListEl) fieldsListEl.innerHTML = ""
+
+      // Reset spinner & success icon
+      resetSpinner(overlay)
+
+      // Reset buttons
+      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
+      if (acceptBtn) acceptBtn.disabled = true
+
+      // Hide modal
+      overlay.style.display = "none"
+      document.documentElement.style.pointerEvents = ""
+    }
+
+    // --- OPEN ---
+    function open(message = "MagicFill: Loading...", fields = null) {
+      const el = createModal()
+
+      // Reset port state for new session
+      delete el.__mf_port
+
+      resetSpinner(el)
+
+      const textEl = el.querySelector("#modal-primary-message")
+      if (textEl) textEl.textContent = message
+
+      if (Array.isArray(fields)) {
+        populateFields(fields)
+        el.__mf_lastFields = fields
+      } else if (el.__mf_lastFields) {
+        populateFields(el.__mf_lastFields)
+      }
+
+      const acceptBtn = el.querySelector("#magic-fill-btn-accept")
+      if (acceptBtn) acceptBtn.disabled = true
+
+      document.documentElement.style.pointerEvents = "none"
+      el.style.display = "flex"
+      el.style.pointerEvents = "auto"
+    }
+
+    // --- UPDATE ---
+    function update(message = "MagicFill: Loading...", fields = null) {
+      if (!overlay) overlay = createModal()
+
+      const textEl = overlay.querySelector("#modal-primary-message")
+      if (textEl) textEl.textContent = message
+
+      if (fields && Array.isArray(fields)) populateFields(fields)
+
+      overlay.style.display = "flex"
+      document.documentElement.style.pointerEvents = "none"
+      overlay.style.pointerEvents = "auto"
+    }
+
+    // --- CLOSE (hide only) ---
+    function close() {
+      if (!overlay) return
+      document.documentElement.style.pointerEvents = ""
+      overlay.style.display = "none"
+    }
+
+    function resetSpinner(el) {
+      const spinner = el.querySelector(".magic-fill-spinner")
+      const success = el.querySelector(".magic-fill-success")
+      const innerIcon = spinner?.querySelector("svg.z-10")
+
+      if (spinner) {
+        spinner.style.display = "flex" // show spinner
+        spinner.style.width = "64px" // adjust size
+        spinner.style.height = "64px"
+        spinner.style.position = "relative"
+      }
+
+      if (success) {
+        success.style.display = "none" // hide success icon
+      }
+
+      if (innerIcon) {
+        innerIcon.style.display = "block" // show inner icon
+        innerIcon.style.width = "16px" // adjust size
+        innerIcon.style.height = "16px"
+      }
+    }
+
+    function showSuccessIcon(el) {
+      const spinner = el.querySelector(".magic-fill-spinner")
+      const success = el.querySelector(".magic-fill-success")
+      const innerIcon = spinner?.querySelector("svg.z-10")
+
+      if (spinner) spinner.style.display = "none" // hide spinner
+      if (success) success.style.display = "block" // show success icon
+      if (innerIcon) innerIcon.style.display = "none" // hide inner icon
+    }
+
+    // --- POPULATE FIELDS ---
+    function populateFields(fields) {
+      const el = createModal()
+      const fieldsListEl = el.querySelector("#magic-fill-fields-list")
+      if (!fieldsListEl) return
+
+      fieldsListEl.innerHTML = ""
+
+      if (!Array.isArray(fields) || fields.length === 0) {
+        const p = document.createElement("div")
+        p.className = "text-xs text-gray-500 px-3 py-2"
+        p.textContent = "No fields to display"
+        fieldsListEl.appendChild(p)
+        el.__mf_total = 0
+        el.__mf_AiReportedCount = 0
+        const countEl = el.querySelector("#modal-secondary-message")
+        if (countEl) countEl.textContent = `0 / 0`
+        updateButtonState("LOADING")
+        return
+      }
+
+      fields.forEach((f) => {
+        const li = document.createElement("div")
+        li.className = "magic-fill-field-item flex items-center py-1"
+        li.setAttribute("data-field", f)
+        li.setAttribute("role", "listitem")
+        li.innerHTML = `
+        <div 
+          class="w-3 h-3 rounded-full border border-gray-400 
+                 flex items-center justify-center font-bold text-xs 
+                 leading-none text-white shrink-0 mr-2 magic-fill-dot" 
+          aria-hidden="true"
+        ></div>
+        <div 
+          class="magic-fill-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
+        >
+          ${escapeHtml(f)}
+        </div>`
+        li.dataset.reported = "false"
+        fieldsListEl.appendChild(li)
+      })
+
+      el.__mf_total = fields.length
+      el.__mf_AiReportedCount = 0
+
+      const countEl = el.querySelector("#modal-secondary-message")
+      if (countEl) countEl.textContent = `0 / ${fields.length}`
+      updateButtonState("LOADING")
+    }
+
+    // --- UPDATE FIELD ---
+    function updateFieldFromAi(fieldName, fieldValue) {
+      const el = overlay || document.getElementById(OVERLAY_ID)
+      if (!el) return
+      const li = el.querySelector(`[data-field="${cssEscape(fieldName)}"]`)
+      if (!li) return
+      const dot = li.querySelector(".magic-fill-dot")
+      if (!dot) return
+
+      dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      const prevReported = li.dataset.reported === "true"
+
+      dot.classList.toggle("bg-blue-500", !!fieldValue)
+      dot.classList.toggle("bg-red-500", !fieldValue)
+
+      const nameEl = li.querySelector(".magic-fill-field-item-content")
+      if (nameEl) {
+        nameEl.innerHTML = `
+        <span>${escapeHtml(fieldName)}</span>
+        <span class="ml-1 text-gray-600">${escapeHtml(fieldValue)}</span>`
+      }
+
+      if (!prevReported) {
+        li.dataset.reported = "true"
+        el.__mf_AiReportedCount = (el.__mf_AiReportedCount || 0) + 1
+      }
+
+      const countEl = el.querySelector("#modal-secondary-message")
+      if (countEl)
+        countEl.textContent = `${el.__mf_AiReportedCount} / ${el.__mf_total} found`
+    }
+
+    // --- BUTTON STATE ---
+    function updateButtonState(state) {
+      const el = overlay || document.getElementById(OVERLAY_ID)
+      if (!el) return
+      const acceptBtn = el.querySelector("#magic-fill-btn-accept")
+      if (acceptBtn) acceptBtn.disabled = state !== "DONE"
+    }
+
+    // --- LOADING / SUCCESS ICON ---
+    function updateLoadingIcon(isLoading) {
+      const el = overlay || document.getElementById(OVERLAY_ID)
+      if (!el) return
+
+      if (isLoading) {
+        resetSpinner(el)
+      } else {
+        showSuccessIcon(el)
+      }
+    }
+
+    // --- PORT ATTACH/DETACH ---
+    function attachPort(port) {
+      if (!overlay) {
+        console.warn(
+          "MagicFillModal: overlay does not exist, cannot attach port"
+        )
+        return
+      }
+
+      overlay.__mf_port = port
+
+      try {
+        if (port?.onDisconnect?.addListener) {
+          port.onDisconnect.addListener(() => {
+            console.warn("MagicFillModal: port disconnected")
+          })
+        }
+      } catch (e) {
+        console.warn(
+          "MagicFillModal: could not attach onDisconnect listener",
+          e
+        )
+      }
+    }
+
+    // --- SET FORM DATA ---
+    function setFormData(schema, content) {
+      const el = overlay || document.getElementById(OVERLAY_ID)
+      if (!el) return
+      el.__mf_formSchema = schema
+      el.__mf_formContent = content
+    }
+
+    const api = {
+      open,
+      update,
+      close,
+      populateFields,
+      updateFieldFromAi,
+      updateButtonState,
+      updateLoadingIcon,
+      attachPort,
+      setFormData
+    }
+
+    return api
+  })()
+
+  async function openFileExplorer() {
     const input = document.createElement("input")
     input.type = "file"
     input.multiple = true
@@ -431,106 +520,72 @@ function updateFieldFromAi(fieldName, fieldValue) {
 
     input.onchange = async function (event) {
       const userFiles = Array.from(event.target.files)
-      if (userFiles.length > 0) {
-        console.log(`🖼️ ${userFiles.length} file(s) selected.`)
-        updateModal(true)
-        try {
-          const files = await Promise.all(
-            userFiles.map(async (file) => {
-              const jpeg = await convertToJpeg(file, 0.6)
-              const buffer = await fileToArrayBuffer(jpeg)
-              return {
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                data: Array.from(new Uint8Array(buffer))
-              }
-            })
-          )
-          const form = getFormSchema()
-          updateModal(
-            true,
-            "Sending fields to background process...",
-            Object.keys(form.properties)
-          )
+      if (userFiles.length === 0) return
 
-          const port = chrome.runtime.connect({ name: "MAGIC_FILL" })
+      console.log(`🖼️ ${userFiles.length} file(s) selected.`)
+      MagicFillModal.open("Preparing files...")
 
-          // attach the port to the overlay so the cancel button can access it
-          const ovEl = document.getElementById("magic-fill-overlay")
-          if (ovEl) {
-            ovEl.__mf_port = port
-            ovEl.__mf_portAlive = true
+      try {
+        // Convert files to JPEG and array buffers
+        const files = await Promise.all(
+          userFiles.map(async (file) => {
+            const jpeg = await convertToJpeg(file, 0.6)
+            const buffer = await fileToArrayBuffer(jpeg)
+            return {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: Array.from(new Uint8Array(buffer))
+            }
+          })
+        )
+
+        const form = getFormSchema()
+        // Show modal with fields list
+        MagicFillModal.update(
+          "Sending fields to background process...",
+          Object.keys(form.properties)
+        )
+
+        // Connect to background port
+        const port = chrome.runtime.connect({ name: "MAGIC_FILL" })
+        MagicFillModal.attachPort(port)
+
+        port.onMessage.addListener((msg) => {
+          if (!msg || !msg.action) return
+
+          const el = document.getElementById("magic-fill-overlay")
+          if (!el) return
+
+          switch (msg.action) {
+            case "UPDATE_PROGRESS_MESSAGE":
+              MagicFillModal.update(msg.content)
+              break
+            case "UPDATE_FIELD_STATUS":
+              MagicFillModal.updateFieldFromAi(
+                msg.content.field,
+                msg.content.value
+              )
+              break
+            case "DONE":
+              MagicFillModal.setFormData(form, msg.content)
+              MagicFillModal.updateLoadingIcon(false)
+              MagicFillModal.updateButtonState("DONE")
+              MagicFillModal.update("AI model finished")
+              break
           }
+        })
 
-          // clear the alive flag when the port disconnects
-          try {
-            if (
-              port &&
-              port.onDisconnect &&
-              typeof port.onDisconnect.addListener === "function"
-            ) {
-              port.onDisconnect.addListener(() => {
-                try {
-                  const ovd = document.getElementById(
-                    "magic-fill-overlay"
-                  )
-                  if (ovd) ovd.__mf_portAlive = false
-                } catch (e) {}
-              })
-            }
-          } catch (e) {}
-
-          port.onMessage.addListener((msg) => {
-            if (!msg || !msg.action) return
-            switch (msg.action) {
-              case "UPDATE_PROGRESS_MESSAGE":
-                updateModal(true, msg.content)
-                break
-              case "UPDATE_FIELD_STATUS":
-                const ov = document.getElementById(
-                  "magic-fill-overlay"
-                )
-                if (ov) {
-                  ov.__mf_updateFieldFromAi(
-                    msg.content.field,
-                    msg.content.value
-                  )
-                }
-                break
-              case "DONE":
-                try {
-                  const ov = document.getElementById("magic-fill-overlay")
-                  if (ov && typeof ov.__mf_setSuccessState === "function") {
-                    ov.__mf_formSchema = form
-                    ov.__mf_formContent = msg.content
-                    ov.__mf_setSuccessState(true)
-                    if (ov.__mf_updateButtonState)
-                      ov.__mf_updateButtonState("DONE")
-                  } else {
-                    updateModal(true, "AI finished processing", null, { success: true })
-                  }
-                  const textEl = document.getElementById("modal-primary-message")
-                  if (textEl) textEl.textContent = "Done"
-                } catch (e) {}
-                break
-              default:
-                // unknown action
-                break
-            }
-          })
-
-          port.postMessage({
-            action: "START_PROCESSING",
-            content: { form, files }
-          })
-        } catch (error) {
-          console.log("❌ Error processing files:", error)
-        }
+        port.postMessage({
+          action: "START_PROCESSING",
+          content: { form, files }
+        })
+      } catch (error) {
+        console.error("❌ Error processing files:", error)
+        MagicFillModal.update("An error occurred while processing.")
       }
     }
 
-    input.appendChild(document.createElement("div"))
     document.body.appendChild(input)
     input.click()
   }

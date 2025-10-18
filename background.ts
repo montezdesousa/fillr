@@ -336,7 +336,7 @@ async function processFiles(
     })
     console.timeEnd("AI processing time")
   } catch (err) {
-    if (err.message !== ABORT_MESSAGE) {
+    if (String(err) !== ABORT_MESSAGE) {
       console.log("❌ Error during AI processing:", err)
       sendMessage<UpdateProgressMessage>(port, {
         action: Action.UPDATE_PROGRESS_MESSAGE,
