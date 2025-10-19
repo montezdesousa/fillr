@@ -7,7 +7,7 @@
     background-clip: padding-box;
   }
 
-  .button {
+  .mf-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -23,33 +23,33 @@
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .button:disabled {
+  .mf-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 
-  .button:focus {
+  .mf-button:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(25, 84, 199, 0.3);
   }
 
-  .primary-button {
+  .mf-primary-button {
     background-color: #1954C7;
     color: white;
     border: none;
   }
 
-  .primary-button:hover {
+  .mf-primary-button:hover {
     background-color: rgba(25, 84, 199, 0.8);
   }
 
-  .secondary-button {
+  .mf-secondary-button {
     background-color: white;
     color: #1954C7;
     border: 1px solid #1954C7;
   }
 
-  .secondary-button:hover {
+  .mf-secondary-button:hover {
     background-color: rgba(139, 139, 139, 0.3);
   }
 }

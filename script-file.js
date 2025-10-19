@@ -24,14 +24,14 @@
       disabled
       id="magic-fill-btn-accept"
       type="button" 
-      class="button primary-button"
+      class="mf-button mf-primary-button"
     >
       Accept
     </button>
     <button
       id="magic-fill-btn-cancel"
       type="button" 
-      class="button secondary-button"
+      class="mf-button mf-secondary-button"
     >
       Cancel
     </button>
@@ -445,10 +445,16 @@
 
     // --- BUTTON STATE ---
     function updateButtonState(state) {
-      if (!overlay) return;
-      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept");
-      if (state === "READY" || state === "ERROR") {
-        if (acceptBtn) acceptBtn.disabled === true
+      // READY, RUNNING, ERROR
+      if (!overlay) return
+      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
+      if (!acceptBtn) return
+      switch (state) {
+        case "READY":
+          acceptBtn.disabled === false
+          break
+        default:
+          acceptBtn.disabled === true
       }
     }
 
