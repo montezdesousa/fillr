@@ -249,7 +249,7 @@
       // Cancel running port
       if (overlay.__mf_port) {
         try {
-          overlay.__mf_port.postMessage({ action: "CANCEL" });
+          overlay.__mf_port.postMessage({ action: "CANCEL", message: "User clicked Cancel" });
         } catch {}
         try {
           overlay.__mf_port.disconnect();
@@ -342,6 +342,14 @@
       `;
     }
 
+    function showErrorIcon(modalEl = overlay) {
+      if (!modalEl) return;
+      const placeholder = modalEl.querySelector(".modal-primary-icon-placeholder");
+      if (!placeholder) return;
+
+      placeholder.innerHTML = MAIN_ICON_SVG;
+    }
+
     function showMainIcon(modalEl = overlay) {
       if (!modalEl) return;
       const placeholder = modalEl.querySelector(".modal-primary-icon-placeholder");
@@ -368,7 +376,7 @@
         overlay.__mf_AiReportedCount = 0;
         const countEl = overlay.querySelector("#modal-secondary-message");
         if (countEl) countEl.textContent = `0 / 0`;
-        updateButtonState("LOADING");
+        updateButtonState("RUNNING");
         return;
       }
 
@@ -400,7 +408,7 @@
       const countEl = overlay.querySelector("#modal-secondary-message");
       if (countEl)
         countEl.textContent = `0 / ${fields.length}`;
-      updateButtonState("LOADING");
+      updateButtonState("RUNNING");
     }
 
     // --- UPDATE SINGLE FIELD ---
@@ -439,7 +447,9 @@
     function updateButtonState(state) {
       if (!overlay) return;
       const acceptBtn = overlay.querySelector("#magic-fill-btn-accept");
-      if (acceptBtn) acceptBtn.disabled = state !== "DONE";
+      if (state === "READY" || state === "ERROR") {
+        if (acceptBtn) acceptBtn.disabled === true
+      }
     }
 
     // --- PORT ATTACH/DETACH ---
@@ -476,6 +486,7 @@
       populateFields,
       updateFieldFromAi,
       updateButtonState,
+      showErrorIcon,
       showMainIcon,
       attachPort,
       setFormData
@@ -538,10 +549,15 @@
                 msg.content.value
               )
               break
+            case "ERROR":
+              MagicFillModal.showErrorIcon()
+              MagicFillModal.updateButtonState("ERROR")
+              MagicFillModal.update(msg.content)              
+              break         
             case "DONE":
               MagicFillModal.setFormData(form, msg.content)
               MagicFillModal.showMainIcon()
-              MagicFillModal.updateButtonState("DONE")
+              MagicFillModal.updateButtonState("READY")
               MagicFillModal.update("AI model finished")
               break
           }
@@ -553,6 +569,8 @@
         })
       } catch (error) {
         console.error("❌ Error processing files:", error)
+        MagicFillModal.showErrorIcon()
+        MagicFillModal.updateButtonState("ERROR")
         MagicFillModal.update("An error occurred while processing.")
       }
     }

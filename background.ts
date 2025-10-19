@@ -9,7 +9,8 @@ enum Action {
   UPDATE_PROGRESS_MESSAGE = "UPDATE_PROGRESS_MESSAGE",
   UPDATE_FIELD_STATUS = "UPDATE_FIELD_STATUS",
   DONE = "DONE",
-  CANCEL = "CANCEL"
+  CANCEL = "CANCEL",
+  ERROR = "ERROR"
 }
 interface StartProcessingMessage {
   action: Action.START_PROCESSING
@@ -30,8 +31,13 @@ interface DoneMessage {
   action: Action.DONE
   content: { [key: string]: any }
 }
+interface ErrorMessage {
+  action: Action.ERROR
+  content: string
+}
 interface CancelMessage {
   action: Action.CANCEL
+  content: string
 }
 type Message =
   | StartProcessingMessage
@@ -338,9 +344,9 @@ async function processFiles(
   } catch (err) {
     if (String(err) !== ABORT_MESSAGE) {
       console.log("❌ Error during AI processing:", err)
-      sendMessage<UpdateProgressMessage>(port, {
-        action: Action.UPDATE_PROGRESS_MESSAGE,
-        content: "Error during processing."
+      sendMessage<ErrorMessage>(port, {
+        action: Action.ERROR,
+        content: err
       })
     }
   } finally {
