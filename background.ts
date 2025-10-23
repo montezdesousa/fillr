@@ -1,8 +1,5 @@
 const PORT_NAME = "MAGIC_FILL"
 const CONTEXT_ITEM_PARENT_ID = "xport-context-item-parent"
-const CONTEXT_ITEM_ID_FILE = "xport-context-item-file"
-const CONTEXT_ITEM_ID_CAMERA = "xport-context-item-camera"
-const CONTEXT_ITEM_ID_CLIPBOARD = "xport-context-item-clipboard"
 const ABORT_MESSAGE = "Aborted by user"
 enum Action {
   START_PROCESSING = "START_PROCESSING",
@@ -68,35 +65,15 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll()
   chrome.contextMenus.create({
     id: CONTEXT_ITEM_PARENT_ID,
-    title: "Fill from...",
+    title: "Fill...",
     contexts: ["all"]
-  })
-  chrome.contextMenus.create({
-    id: CONTEXT_ITEM_ID_FILE,
-    title: "File",
-    parentId: CONTEXT_ITEM_PARENT_ID,
-    contexts: ["all"]
-  })
-  chrome.contextMenus.create({
-    id: CONTEXT_ITEM_ID_CAMERA,
-    title: "Camera",
-    parentId: CONTEXT_ITEM_PARENT_ID,
-    contexts: ["all"],
-    enabled: false // TODO: To be implemented
-  })
-  chrome.contextMenus.create({
-    id: CONTEXT_ITEM_ID_CLIPBOARD,
-    title: "Clipboard",
-    parentId: CONTEXT_ITEM_PARENT_ID,
-    contexts: ["all"],
-    enabled: false // TODO: To be implemented
   })
   console.log("⚙️ Context menu item created.")
 })
 
 // --- On context menu item clicked ---
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (!tab?.id || info.menuItemId !== CONTEXT_ITEM_ID_FILE) return
+  if (!tab?.id || info.menuItemId !== CONTEXT_ITEM_PARENT_ID) return
   console.log("👆 Context menu item clicked. Injecting content script...")
   chrome.scripting.insertCSS({
     target: { tabId: tab.id },
