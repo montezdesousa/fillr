@@ -21,7 +21,6 @@
   ></div>
   <div id="magic-fill-actions" class="mt-4 flex justify-end gap-3 w-full">
     <button
-      disabled
       id="magic-fill-btn-accept"
       type="button" 
       class="mf-button mf-primary-button"
@@ -451,10 +450,10 @@
       if (!acceptBtn) return
       switch (state) {
         case "READY":
-          acceptBtn.disabled === false
+          acceptBtn.disabled = false
           break
         default:
-          acceptBtn.disabled === true
+          acceptBtn.disabled = true
       }
     }
 
