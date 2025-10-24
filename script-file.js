@@ -704,10 +704,7 @@
     document.body.appendChild(overlay)
 
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        console.log("🟦 Clicked outside modal — closing")
-        removeOverlay()
-      }
+      if (e.target === overlay) removeOverlay()
     })
 
     const removeOverlay = () => overlay.remove()
