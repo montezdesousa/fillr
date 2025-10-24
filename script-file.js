@@ -165,7 +165,7 @@
     })
   }
 
-  function convertToJpeg(file, quality = 0.8) {
+  function convertToJpegAndCompress(file, quality = 0.8) {
     const outputMimeType = "image/jpeg"
     const MAX_WIDTH = 1920
     const MAX_HEIGHT = 1920
@@ -550,7 +550,7 @@
       // Convert files to JPEG and array buffers
       const files = await Promise.all(
         userFiles.map(async (file) => {
-          const jpeg = await convertToJpeg(file, 0.6)
+          const jpeg = await convertToJpegAndCompress(file, 0.6)
           const buffer = await fileToArrayBuffer(jpeg)
           return {
             name: file.name,
