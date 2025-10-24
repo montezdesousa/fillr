@@ -703,6 +703,13 @@
     overlay.innerHTML = CHOICE_MODAL_HTML
     document.body.appendChild(overlay)
 
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        console.log("🟦 Clicked outside modal — closing")
+        removeOverlay()
+      }
+    })
+
     const removeOverlay = () => overlay.remove()
 
     // --- Handlers ---
