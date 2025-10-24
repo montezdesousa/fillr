@@ -65,6 +65,17 @@
   </div>      
 </div>`
 
+  const CAMERA_MODAL_HTML = `
+    <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center gap-4 w-[22rem]">
+      <h2 class="text-lg font-bold">Take a photo</h2>
+      <video id="camera-stream" autoplay playsinline class="rounded-lg w-full h-64 object-cover bg-black"></video>
+      <div class="flex gap-2 w-full">
+        <button id="camera-capture" class="mf-button mf-primary-button flex-1">Capture</button>
+        <button id="camera-cancel" class="mf-button flex-1">Cancel</button>
+      </div>
+    </div>
+  `
+
   const CHOICE_MODAL_HTML = `
   <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col w-80">
     <div class="flex items-center gap-3 mb-4">
@@ -77,7 +88,6 @@
     <div class="flex flex-col gap-2">
       <button id="choice-file" class="mf-button mf-secondary-button w-full">File</button>
       <button id="choice-camera" class="mf-button mf-secondary-button w-full">Camera</button>
-      <button id="choice-clipboard" class="mf-button mf-secondary-button w-full">Clipboard</button>
     </div>
   </div>
 `
@@ -212,7 +222,7 @@
     })
   }
 
-  const MagicFillModal = (() => {
+  const ProcessingModal = (() => {
     const OVERLAY_ID = "magic-fill-overlay"
     let overlay = null
 
@@ -488,7 +498,7 @@
     function attachPort(port) {
       if (!overlay) {
         console.warn(
-          "MagicFillModal: overlay does not exist, cannot attach port"
+          "ProcessingModal: overlay does not exist, cannot attach port"
         )
         return
       }
@@ -498,12 +508,12 @@
       try {
         if (port?.onDisconnect?.addListener) {
           port.onDisconnect.addListener(() => {
-            console.warn("MagicFillModal: port disconnected")
+            console.warn("ProcessingModal: port disconnected")
           })
         }
       } catch (e) {
         console.warn(
-          "MagicFillModal: could not attach onDisconnect listener",
+          "ProcessingModal: could not attach onDisconnect listener",
           e
         )
       }
@@ -530,123 +540,182 @@
     }
   })()
 
-  async function openFileExplorer() {
+  async function processUserFiles(userFiles) {
+    if (userFiles.length === 0) return
+
+    console.log(`🖼️ ${userFiles.length} file(s) selected.`)
+    ProcessingModal.open("Preparing files...")
+
+    try {
+      // Convert files to JPEG and array buffers
+      const files = await Promise.all(
+        userFiles.map(async (file) => {
+          const jpeg = await convertToJpeg(file, 0.6)
+          const buffer = await fileToArrayBuffer(jpeg)
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: Array.from(new Uint8Array(buffer))
+          }
+        })
+      )
+
+      const form = getFormSchema()
+      // Show modal with fields list
+      ProcessingModal.update(
+        "Sending fields to background process...",
+        Object.keys(form.properties)
+      )
+
+      // Connect to background port
+      const port = chrome.runtime.connect({ name: "MAGIC_FILL" })
+      ProcessingModal.attachPort(port)
+
+      port.onMessage.addListener((msg) => {
+        if (!msg || !msg.action) return
+
+        const el = document.getElementById("magic-fill-overlay")
+        if (!el) return
+
+        switch (msg.action) {
+          case "UPDATE_PROGRESS_MESSAGE":
+            ProcessingModal.update(msg.content)
+            break
+          case "UPDATE_FIELD_STATUS":
+            ProcessingModal.updateFieldFromAi(
+              msg.content.field,
+              msg.content.value
+            )
+            break
+          case "ERROR":
+            ProcessingModal.showErrorIcon()
+            ProcessingModal.updateButtonState("ERROR")
+            ProcessingModal.update(msg.content)
+            break
+          case "DONE":
+            ProcessingModal.setFormData(form, msg.content)
+            ProcessingModal.showMainIcon()
+            ProcessingModal.updateButtonState("READY")
+            ProcessingModal.update("AI model finished")
+            break
+        }
+      })
+
+      port.postMessage({
+        action: "START_PROCESSING",
+        content: { form, files }
+      })
+    } catch (error) {
+      console.error("❌ Error processing files:", error)
+      ProcessingModal.showErrorIcon()
+      ProcessingModal.updateButtonState("ERROR")
+      ProcessingModal.update("An error occurred while processing.")
+    }
+  }
+
+  async function handleFileChoice() {
     const input = document.createElement("input")
     input.type = "file"
     input.multiple = true
     input.accept = "image/*"
     input.style.display = "none"
-
     input.onchange = async function (event) {
       const userFiles = Array.from(event.target.files)
-      if (userFiles.length === 0) return
-
-      console.log(`🖼️ ${userFiles.length} file(s) selected.`)
-      MagicFillModal.open("Preparing files...")
-
-      try {
-        // Convert files to JPEG and array buffers
-        const files = await Promise.all(
-          userFiles.map(async (file) => {
-            const jpeg = await convertToJpeg(file, 0.6)
-            const buffer = await fileToArrayBuffer(jpeg)
-            return {
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              data: Array.from(new Uint8Array(buffer))
-            }
-          })
-        )
-
-        const form = getFormSchema()
-        // Show modal with fields list
-        MagicFillModal.update(
-          "Sending fields to background process...",
-          Object.keys(form.properties)
-        )
-
-        // Connect to background port
-        const port = chrome.runtime.connect({ name: "MAGIC_FILL" })
-        MagicFillModal.attachPort(port)
-
-        port.onMessage.addListener((msg) => {
-          if (!msg || !msg.action) return
-
-          const el = document.getElementById("magic-fill-overlay")
-          if (!el) return
-
-          switch (msg.action) {
-            case "UPDATE_PROGRESS_MESSAGE":
-              MagicFillModal.update(msg.content)
-              break
-            case "UPDATE_FIELD_STATUS":
-              MagicFillModal.updateFieldFromAi(
-                msg.content.field,
-                msg.content.value
-              )
-              break
-            case "ERROR":
-              MagicFillModal.showErrorIcon()
-              MagicFillModal.updateButtonState("ERROR")
-              MagicFillModal.update(msg.content)
-              break
-            case "DONE":
-              MagicFillModal.setFormData(form, msg.content)
-              MagicFillModal.showMainIcon()
-              MagicFillModal.updateButtonState("READY")
-              MagicFillModal.update("AI model finished")
-              break
-          }
-        })
-
-        port.postMessage({
-          action: "START_PROCESSING",
-          content: { form, files }
-        })
-      } catch (error) {
-        console.error("❌ Error processing files:", error)
-        MagicFillModal.showErrorIcon()
-        MagicFillModal.updateButtonState("ERROR")
-        MagicFillModal.update("An error occurred while processing.")
-      }
+      processUserFiles(userFiles)
     }
-
     document.body.appendChild(input)
     input.click()
   }
 
+  async function handleCameraChoice() {
+    const overlay = document.createElement("div")
+    overlay.id = "magic-fill-camera-overlay"
+    overlay.className =
+      "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
+    overlay.innerHTML = CAMERA_MODAL_HTML
+    document.body.appendChild(overlay)
+
+    const video = overlay.querySelector("#camera-stream")
+    const captureBtn = overlay.querySelector("#camera-capture")
+    const cancelBtn = overlay.querySelector("#camera-cancel")
+
+    let stream
+
+    const removeOverlay = () => {
+      overlay.remove()
+      stream?.getTracks().forEach((track) => track.stop())
+    }
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      video.srcObject = stream
+      await video.play()
+    } catch (err) {
+      console.error("❌ Camera access denied or not available:", err)
+      removeOverlay()
+      return
+    }
+
+    captureBtn.addEventListener("click", async () => {
+      if (!video.videoWidth || !video.videoHeight) {
+        console.warn("⚠️ Video not ready yet")
+        return
+      }
+
+      const canvas = document.createElement("canvas")
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext("2d")
+      ctx.drawImage(video, 0, 0)
+
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) {
+            console.error("❌ Failed to capture image")
+            return
+          }
+          const file = new File([blob], `camera_capture_${Date.now()}.jpg`, {
+            type: "image/jpeg"
+          })
+          console.log("📸 Captured file:", file)
+          processUserFiles([file])
+        },
+        "image/jpeg",
+        0.95
+      )
+
+      removeOverlay()
+    })
+
+    cancelBtn.addEventListener("click", () => {
+      console.log("❌ Camera canceled")
+      removeOverlay()
+    })
+  }
+
   // --- CHOICE MODAL ---
-function openChoiceModal() {
-  const overlay = document.createElement("div")
-  overlay.id = "magic-fill-choice-overlay"
-  overlay.className =
-    "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
-  overlay.innerHTML = CHOICE_MODAL_HTML
-  document.body.appendChild(overlay)
+  function openChoiceModal() {
+    const overlay = document.createElement("div")
+    overlay.id = "magic-fill-choice-overlay"
+    overlay.className =
+      "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
+    overlay.innerHTML = CHOICE_MODAL_HTML
+    document.body.appendChild(overlay)
 
-  const removeOverlay = () => overlay.remove()
+    const removeOverlay = () => overlay.remove()
 
-  // --- Handlers ---
-  overlay.querySelector("#choice-file").addEventListener("click", () => {
-    console.log("📁 File selected")
-    openFileExplorer?.() // optional handler if defined
-    removeOverlay()
-  })
+    // --- Handlers ---
+    overlay.querySelector("#choice-file").addEventListener("click", () => {
+      handleFileChoice()
+      removeOverlay()
+    })
 
-  overlay.querySelector("#choice-camera").addEventListener("click", () => {
-    console.log("📷 Camera selected")
-    // your camera handler here
-    removeOverlay()
-  })
-
-  overlay.querySelector("#choice-clipboard").addEventListener("click", () => {
-    console.log("📋 Clipboard selected")
-    // your clipboard handler here
-    removeOverlay()
-  })
-
-}
+    overlay.querySelector("#choice-camera").addEventListener("click", () => {
+      handleCameraChoice()
+      removeOverlay()
+    })
+  }
 
   // --- ENTRY POINT ---
   openChoiceModal()
