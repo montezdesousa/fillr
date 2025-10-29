@@ -68,10 +68,13 @@
   const CAMERA_MODAL_HTML = `
     <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center gap-4 w-[22rem]">
       <h2 class="text-lg font-bold">Take a photo</h2>
-      <video id="camera-stream" autoplay playsinline class="rounded-lg w-full h-64 object-cover bg-black"></video>
-      <div class="flex gap-2 w-full">
-        <button id="camera-capture" class="mf-button mf-primary-button flex-1">Capture</button>
-        <button id="camera-cancel" class="mf-button flex-1">Cancel</button>
+      <div class="relative w-full h-64">
+        <video id="camera-stream" autoplay playsinline class="rounded-lg w-full h-full object-cover bg-black"></video>
+        <img id="camera-preview" class="hidden rounded-lg w-full h-full object-cover bg-black" />
+      </div>
+      <div id="camera-buttons" class="flex gap-2 w-full">
+        <button id="camera-capture" class="mf-button mf-primary-button">Capture</button>
+        <button id="camera-cancel" class="mf-button mf-secondary-button">Cancel</button>
       </div>
     </div>
   `
@@ -637,61 +640,89 @@
     document.body.appendChild(overlay)
 
     const video = overlay.querySelector("#camera-stream")
-    const captureBtn = overlay.querySelector("#camera-capture")
-    const cancelBtn = overlay.querySelector("#camera-cancel")
+    const preview = overlay.querySelector("#camera-preview")
+    const buttons = overlay.querySelector("#camera-buttons")
 
     let stream
+    let capturedFile = null
 
     const removeOverlay = () => {
       overlay.remove()
-      stream?.getTracks().forEach((track) => track.stop())
+      stream?.getTracks().forEach((t) => t.stop())
     }
 
+    // Start camera
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true })
       video.srcObject = stream
       await video.play()
     } catch (err) {
-      console.error("❌ Camera access denied or not available:", err)
+      console.error("❌ Camera access denied or unavailable:", err)
       removeOverlay()
       return
     }
 
-    captureBtn.addEventListener("click", async () => {
-      if (!video.videoWidth || !video.videoHeight) {
-        console.warn("⚠️ Video not ready yet")
-        return
+    const setButtons = (state) => {
+      if (state === "LIVE") {
+        buttons.innerHTML = `
+        <button id="camera-capture" class="mf-button mf-primary-button">Capture</button>
+        <button id="camera-cancel" class="mf-button mf-secondary-button">Cancel</button>
+      `
+        overlay
+          .querySelector("#camera-capture")
+          .addEventListener("click", capturePhoto)
+        overlay
+          .querySelector("#camera-cancel")
+          .addEventListener("click", removeOverlay)
+      } else if (state === "PREVIEW") {
+        buttons.innerHTML = `
+        <button id="camera-accept" class="mf-button mf-primary-button">Accept</button>
+        <button id="camera-retry" class="mf-button mf-secondary-button">Retry</button>
+        <button id="camera-cancel" class="mf-button mf-secondary-button">Cancel</button>
+      `
+        overlay
+          .querySelector("#camera-accept")
+          .addEventListener("click", () => {
+            processUserFiles([capturedFile])
+            removeOverlay()
+          })
+        overlay.querySelector("#camera-retry").addEventListener("click", () => {
+          preview.classList.add("hidden")
+          video.classList.remove("hidden")
+          capturedFile = null
+          setButtons("LIVE")
+        })
+        overlay
+          .querySelector("#camera-cancel")
+          .addEventListener("click", removeOverlay)
       }
+    }
 
+    async function capturePhoto() {
+      if (!video.videoWidth || !video.videoHeight) return
       const canvas = document.createElement("canvas")
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       const ctx = canvas.getContext("2d")
       ctx.drawImage(video, 0, 0)
 
-      canvas.toBlob(
-        async (blob) => {
-          if (!blob) {
-            console.error("❌ Failed to capture image")
-            return
-          }
-          const file = new File([blob], `camera_capture_${Date.now()}.jpg`, {
-            type: "image/jpeg"
-          })
-          console.log("📸 Captured file:", file)
-          processUserFiles([file])
-        },
-        "image/jpeg",
-        0.95
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.95)
       )
+      if (!blob) return
 
-      removeOverlay()
-    })
+      capturedFile = new File([blob], `camera_capture_${Date.now()}.jpg`, {
+        type: "image/jpeg"
+      })
 
-    cancelBtn.addEventListener("click", () => {
-      console.log("❌ Camera canceled")
-      removeOverlay()
-    })
+      preview.src = URL.createObjectURL(blob)
+      preview.classList.remove("hidden")
+      video.classList.add("hidden")
+
+      setButtons("PREVIEW")
+    }
+
+    setButtons("LIVE")
   }
 
   // --- CHOICE MODAL ---
