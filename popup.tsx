@@ -1,19 +1,12 @@
 import React from "react";
 import "./popup.css";
+import icon from "data-base64:~assets/icon.png"
 
 export default function Popup() {
   return (
     <div className="popup-container">
       <div className="popup-header">
-        <svg
-          className="popup-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle cx="12" cy="12" r="10" fill="#e5e7eb" />
-        </svg>
-
+        <img src={icon} alt="Fillr logo" className="popup-icon" />
         <div className="popup-title">Fillr</div>
       </div>
 
