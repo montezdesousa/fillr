@@ -1,4 +1,4 @@
-const PORT_NAME = "MAGIC_FILL"
+const PORT_NAME = "ce432752-e63a-4b01-bd73-8cb005df9212"
 const CONTEXT_ITEM_PARENT_ID = "xport-context-item-parent"
 const ABORT_MESSAGE = "Aborted by user"
 enum Action {
@@ -65,7 +65,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll()
   chrome.contextMenus.create({
     id: CONTEXT_ITEM_PARENT_ID,
-    title: "Fillr...",
+    title: "Fill from...",
     contexts: ["all"]
   })
   console.log("⚙️ Context menu item created.")
@@ -77,11 +77,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log("👆 Context menu item clicked. Injecting content script...")
   chrome.scripting.insertCSS({
     target: { tabId: tab.id },
-    files: ["script-file.css"]
+    files: ["modal.css"]
   })
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["script-file.js"]
+    files: ["modal.js"]
   })
 })
 

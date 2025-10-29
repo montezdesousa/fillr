@@ -605,7 +605,7 @@
       )
 
       // Connect to background port
-      const port = chrome.runtime.connect({ name: "MAGIC_FILL" })
+      const port = chrome.runtime.connect({ name: "ce432752-e63a-4b01-bd73-8cb005df9212" })
       ProcessingModal.attachPort(port)
 
       port.onMessage.addListener((msg) => {

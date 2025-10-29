@@ -8,8 +8,8 @@
     "dev": "npm run copy-js && npm run tw:build && plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
-    "tw:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./build/chrome-mv3-dev/script-file.css --content './**/*.js'",
-    "copy-js": "cp script-file.js ./build/chrome-mv3-dev/"
+    "tw:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./build/chrome-mv3-dev/modal.css --content './**/*.js'",
+    "copy-js": "node scripts/copy-js.js"
   },
   "dependencies": {
     "plasmo": "0.90.5",
@@ -41,8 +41,8 @@
     "web_accessible_resources": [
       {
         "resources": [
-          "script-file.js",
-          "script-file.css"
+          "modal.js",
+          "modal.css"
         ],
         "matches": [
           "<all_urls>"
