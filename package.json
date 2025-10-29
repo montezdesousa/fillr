@@ -1,6 +1,6 @@
 {
-  "name": "magic-fill",
-  "displayName": "Magic fill",
+  "name": "fillr",
+  "displayName": "Fillr",
   "version": "0.0.1",
   "description": "An extension to magically fill online forms from files.",
   "author": "montezdesousa@gmail.com",

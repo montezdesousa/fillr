@@ -16,7 +16,7 @@
 
   const GEMINI_SVG = `
 <svg
-  class="magic-fill-inner-ai z-10 absolute inset-0 m-auto" width="16" height="16"
+  class="fillr-inner-ai z-10 absolute inset-0 m-auto" width="16" height="16"
   fill="none" xmlns="http://www.w3.org/2000/svg"
   //viewBox="0 0 65 65"
   style="display: block;"
@@ -24,11 +24,11 @@
 `
 
   const MAIN_ICON_SVG = `
-<svg class="magic-fill-ai absolute w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>  
+<svg class="fillr-ai absolute w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>  
 `
 
   const PROCESSING_MODAL_HTML = `
-<div id="magic-fill-loading-box" aria-hidden="false" 
+<div id="fillr-loading-box" aria-hidden="false" 
   class="
     inline-flex flex-col items-start gap-3 w-96 p-5 
     bg-white text-gray-800 shadow-2xl shadow-gray-700/50 
@@ -40,23 +40,23 @@
     <div id="modal-primary-message" class="text-s truncate flex-grow min-w-0 font-medium text-gray-700"></div>        
   </div>
   <div id="modal-secondary-message" class="mt-2 ml-2 font-semibold text-xs text-gray-600"></div>  
-  <div id="magic-fill-fields-list" aria-hidden="false"
+  <div id="fillr-fields-list" aria-hidden="false"
     class="
       w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
       flex flex-col gap-y-2
-      magic-fill-list-container
+      fillr-list-container
     "
   ></div>
-  <div id="magic-fill-actions" class="mt-4 flex justify-end gap-3 w-full">
+  <div id="fillr-actions" class="mt-4 flex justify-end gap-3 w-full">
     <button
-      id="magic-fill-btn-accept"
+      id="fillr-btn-accept"
       type="button" 
       class="mf-button mf-primary-button"
     >
       Accept
     </button>
     <button
-      id="magic-fill-btn-cancel"
+      id="fillr-btn-cancel"
       type="button" 
       class="mf-button mf-secondary-button"
     >
@@ -226,7 +226,7 @@
   }
 
   const ProcessingModal = (() => {
-    const OVERLAY_ID = "magic-fill-overlay"
+    const OVERLAY_ID = "fillr-overlay"
     let overlay = null
 
     // --- CREATE OVERLAY ---
@@ -242,8 +242,8 @@
       document.body.appendChild(overlay)
 
       // Buttons setup
-      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
-      const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
+      const acceptBtn = overlay.querySelector("#fillr-btn-accept")
+      const cancelBtn = overlay.querySelector("#fillr-btn-cancel")
 
       if (acceptBtn) {
         acceptBtn.addEventListener("click", () => {
@@ -297,7 +297,7 @@
       overlay.__mf_AiReportedCount = 0
 
       // Clear field list
-      const fieldsListEl = overlay.querySelector("#magic-fill-fields-list")
+      const fieldsListEl = overlay.querySelector("#fillr-fields-list")
       if (fieldsListEl) fieldsListEl.innerHTML = ""
 
       // Reset spinner & icon
@@ -307,7 +307,7 @@
       if (placeholder) placeholder.innerHTML = ""
 
       // Reset buttons
-      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
+      const acceptBtn = overlay.querySelector("#fillr-btn-accept")
       if (acceptBtn) acceptBtn.disabled = true
 
       // Hide modal
@@ -333,7 +333,7 @@
         populateFields(overlay.__mf_lastFields)
       }
 
-      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
+      const acceptBtn = overlay.querySelector("#fillr-btn-accept")
       if (acceptBtn) acceptBtn.disabled = true
 
       document.documentElement.style.pointerEvents = "none"
@@ -401,7 +401,7 @@
     // --- POPULATE FIELDS ---
     function populateFields(fields) {
       createOverlay() // ensure overlay exists
-      const fieldsListEl = overlay.querySelector("#magic-fill-fields-list")
+      const fieldsListEl = overlay.querySelector("#fillr-fields-list")
       if (!fieldsListEl) return
 
       fieldsListEl.innerHTML = ""
@@ -422,18 +422,18 @@
 
       fields.forEach((f) => {
         const li = document.createElement("div")
-        li.className = "magic-fill-field-item flex items-center py-1"
+        li.className = "fillr-field-item flex items-center py-1"
         li.setAttribute("data-field", f)
         li.setAttribute("role", "listitem")
         li.innerHTML = `
           <div 
             class="w-3 h-3 rounded-full border border-gray-400 
                   flex items-center justify-center font-bold text-xs 
-                  leading-none text-white shrink-0 mr-2 magic-fill-dot" 
+                  leading-none text-white shrink-0 mr-2 fillr-dot" 
             aria-hidden="true"
           ></div>
           <div 
-            class="magic-fill-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
+            class="fillr-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
           >
             ${escapeHtml(f)}
           </div>
@@ -455,7 +455,7 @@
       if (!overlay) return
       const li = overlay.querySelector(`[data-field="${cssEscape(fieldName)}"]`)
       if (!li) return
-      const dot = li.querySelector(".magic-fill-dot")
+      const dot = li.querySelector(".fillr-dot")
       if (!dot) return
 
       dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
@@ -464,7 +464,7 @@
       dot.classList.toggle("bg-blue-500", !!fieldValue)
       dot.classList.toggle("bg-red-500", !fieldValue)
 
-      const nameEl = li.querySelector(".magic-fill-field-item-content")
+      const nameEl = li.querySelector(".fillr-field-item-content")
       if (nameEl) {
         nameEl.innerHTML = `
           <span>${escapeHtml(fieldName)}</span>
@@ -485,23 +485,23 @@
     // --- BUTTON STATE ---
     function updateButtonState(state) {
       if (!overlay) return
-      const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
-      const actions = overlay.querySelector("#magic-fill-actions")
+      const acceptBtn = overlay.querySelector("#fillr-btn-accept")
+      const actions = overlay.querySelector("#fillr-actions")
       if (!acceptBtn || !actions) return
 
       switch (state) {
         case "RUNNING":
         case "ERROR":
           acceptBtn.disabled = true
-          const retry = overlay.querySelector("#magic-fill-btn-retry")
+          const retry = overlay.querySelector("#fillr-btn-retry")
           if (retry) retry.remove()
           break
 
         case "DONE":
           acceptBtn.disabled = false
-          if (!overlay.querySelector("#magic-fill-btn-retry")) {
+          if (!overlay.querySelector("#fillr-btn-retry")) {
             const retryBtn = document.createElement("button")
-            retryBtn.id = "magic-fill-btn-retry"
+            retryBtn.id = "fillr-btn-retry"
             retryBtn.type = "button"
             retryBtn.className = "mf-button mf-secondary-button"
             retryBtn.textContent = "Retry"
@@ -514,7 +514,7 @@
                 await processFiles(lastFiles)
               }
             })
-            const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
+            const cancelBtn = overlay.querySelector("#fillr-btn-cancel")
             if (cancelBtn) actions.insertBefore(retryBtn, cancelBtn)
             else actions.appendChild(retryBtn)
           }
@@ -588,7 +588,7 @@
     )
 
     // Save prepared files for Retry
-    const overlay = document.getElementById("magic-fill-overlay")
+    const overlay = document.getElementById("fillr-overlay")
     if (overlay) overlay.__mf_lastFiles = files
 
     return files
@@ -664,7 +664,7 @@
 
   async function handleCameraChoice() {
     const overlay = document.createElement("div")
-    overlay.id = "magic-fill-camera-overlay"
+    overlay.id = "fillr-camera-overlay"
     overlay.className =
       "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
     overlay.innerHTML = CAMERA_MODAL_HTML
@@ -760,7 +760,7 @@
   // --- CHOICE MODAL ---
   function openChoiceModal() {
     const overlay = document.createElement("div")
-    overlay.id = "magic-fill-choice-overlay"
+    overlay.id = "fillr-choice-overlay"
     overlay.className =
       "fixed inset-0 flex items-center justify-center z-[99999] bg-black/30 backdrop-blur-sm"
     overlay.innerHTML = CHOICE_MODAL_HTML

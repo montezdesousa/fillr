@@ -65,7 +65,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll()
   chrome.contextMenus.create({
     id: CONTEXT_ITEM_PARENT_ID,
-    title: "Fill...",
+    title: "Fillr...",
     contexts: ["all"]
   })
   console.log("⚙️ Context menu item created.")
