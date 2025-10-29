@@ -484,16 +484,41 @@
 
     // --- BUTTON STATE ---
     function updateButtonState(state) {
-      // READY, RUNNING, ERROR
       if (!overlay) return
       const acceptBtn = overlay.querySelector("#magic-fill-btn-accept")
-      if (!acceptBtn) return
+      const actions = overlay.querySelector("#magic-fill-actions")
+      if (!acceptBtn || !actions) return
+
       switch (state) {
-        case "READY":
-          acceptBtn.disabled = false
-          break
-        default:
+        case "RUNNING":
+        case "ERROR":
           acceptBtn.disabled = true
+          const retry = overlay.querySelector("#magic-fill-btn-retry")
+          if (retry) retry.remove()
+          break
+
+        case "DONE":
+          acceptBtn.disabled = false
+          if (!overlay.querySelector("#magic-fill-btn-retry")) {
+            const retryBtn = document.createElement("button")
+            retryBtn.id = "magic-fill-btn-retry"
+            retryBtn.type = "button"
+            retryBtn.className = "mf-button mf-secondary-button"
+            retryBtn.textContent = "Retry"
+            retryBtn.addEventListener("click", async () => {
+              console.log("🔁 Retry clicked")
+              const lastFiles = overlay.__mf_lastFiles
+              if (lastFiles) {
+                _showSpinner()
+                updateButtonState("RUNNING")
+                await processFiles(lastFiles)
+              }
+            })
+            const cancelBtn = overlay.querySelector("#magic-fill-btn-cancel")
+            if (cancelBtn) actions.insertBefore(retryBtn, cancelBtn)
+            else actions.appendChild(retryBtn)
+          }
+          break
       }
     }
 
@@ -543,27 +568,35 @@
     }
   })()
 
-  async function processUserFiles(userFiles) {
+  async function prepareUserFiles(userFiles) {
     if (userFiles.length === 0) return
-
     console.log(`🖼️ ${userFiles.length} file(s) selected.`)
     ProcessingModal.open("Preparing files...")
+    
+    // Convert files to JPEG and array buffers
+    const files = await Promise.all(
+      userFiles.map(async (file) => {
+        const jpeg = await convertToJpegAndCompress(file, 0.6)
+        const buffer = await fileToArrayBuffer(jpeg)
+        return {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: Array.from(new Uint8Array(buffer))
+        }
+      })
+    )
 
+    // Save prepared files for Retry
+    const overlay = document.getElementById("magic-fill-overlay")
+    if (overlay) overlay.__mf_lastFiles = files
+
+    return files
+  }
+
+  async function processFiles(files) {
+    ProcessingModal.update("Processing files...")
     try {
-      // Convert files to JPEG and array buffers
-      const files = await Promise.all(
-        userFiles.map(async (file) => {
-          const jpeg = await convertToJpegAndCompress(file, 0.6)
-          const buffer = await fileToArrayBuffer(jpeg)
-          return {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            data: Array.from(new Uint8Array(buffer))
-          }
-        })
-      )
-
       const form = getFormSchema()
       // Show modal with fields list
       ProcessingModal.update(
@@ -577,9 +610,6 @@
 
       port.onMessage.addListener((msg) => {
         if (!msg || !msg.action) return
-
-        const el = document.getElementById("magic-fill-overlay")
-        if (!el) return
 
         switch (msg.action) {
           case "UPDATE_PROGRESS_MESSAGE":
@@ -599,7 +629,7 @@
           case "DONE":
             ProcessingModal.setFormData(form, msg.content)
             ProcessingModal.showMainIcon()
-            ProcessingModal.updateButtonState("READY")
+            ProcessingModal.updateButtonState("DONE")
             ProcessingModal.update("AI model finished")
             break
         }
@@ -625,7 +655,8 @@
     input.style.display = "none"
     input.onchange = async function (event) {
       const userFiles = Array.from(event.target.files)
-      processUserFiles(userFiles)
+      const files = await prepareUserFiles(userFiles)
+      processFiles(files)
     }
     document.body.appendChild(input)
     input.click()
@@ -682,8 +713,9 @@
       `
         overlay
           .querySelector("#camera-accept")
-          .addEventListener("click", () => {
-            processUserFiles([capturedFile])
+          .addEventListener("click", async () => {
+            const files = await prepareUserFiles([capturedFile])
+            processFiles(files)
             removeOverlay()
           })
         overlay.querySelector("#camera-retry").addEventListener("click", () => {
