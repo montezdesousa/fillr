@@ -80,10 +80,17 @@
   `
 
   const CHOICE_MODAL_HTML = `
-  <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col w-80">
+  <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col w-80 relative">
+    <button id="choice-close"
+      class="cursor-pointer absolute top-2 right-2 w-6 h-6 flex items-center justify-center
+            text-[#1954C7] hover:text-[#1954C7]/70 transition leading-none text-lg"
+      aria-label="Close">
+      ✕
+    </button>
+
     <div class="flex items-center gap-3 mb-4">
       <div class="w-6 h-6 rounded flex items-center justify-center">
-        ${MAIN_ICON_SVG}  
+        ${MAIN_ICON_SVG}
       </div>
       <h2 class="text-s font-medium text-gray-700">Choose input method</h2>
     </div>
@@ -572,7 +579,7 @@
     if (userFiles.length === 0) return
     console.log(`🖼️ ${userFiles.length} file(s) selected.`)
     ProcessingModal.open("Preparing files...")
-    
+
     // Convert files to JPEG and array buffers
     const files = await Promise.all(
       userFiles.map(async (file) => {
@@ -605,7 +612,9 @@
       )
 
       // Connect to background port
-      const port = chrome.runtime.connect({ name: "ce432752-e63a-4b01-bd73-8cb005df9212" })
+      const port = chrome.runtime.connect({
+        name: "ce432752-e63a-4b01-bd73-8cb005df9212"
+      })
       ProcessingModal.attachPort(port)
 
       port.onMessage.addListener((msg) => {
@@ -758,6 +767,7 @@
   }
 
   // --- CHOICE MODAL ---
+  // --- CHOICE MODAL ---
   function openChoiceModal() {
     const overlay = document.createElement("div")
     overlay.id = "fillr-choice-overlay"
@@ -766,11 +776,26 @@
     overlay.innerHTML = CHOICE_MODAL_HTML
     document.body.appendChild(overlay)
 
+    const removeOverlay = () => {
+      overlay.remove()
+      document.removeEventListener("keydown", escListener)
+    }
+
+    // --- Close on outside click ---
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) removeOverlay()
     })
 
-    const removeOverlay = () => overlay.remove()
+    // --- Close on Escape key ---
+    const escListener = (e) => {
+      if (e.key === "Escape") removeOverlay()
+    }
+    document.addEventListener("keydown", escListener)
+
+    // --- Close on X button ---
+    overlay
+      .querySelector("#choice-close")
+      ?.addEventListener("click", removeOverlay)
 
     // --- Handlers ---
     overlay.querySelector("#choice-file").addEventListener("click", () => {
