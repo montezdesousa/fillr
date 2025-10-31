@@ -7,11 +7,11 @@ export default function Popup() {
     <div className="popup-container">
       <div className="popup-header">
         <img src={icon} alt="Fillr logo" className="popup-icon" />
-        <div className="popup-title">Fillr</div>
+        <div className="popup-title">Fillr.ai</div>
       </div>
 
       <div className="popup-secondary-message">
-        Use Fillr to automatically populate web forms from images.
+        Extract and autofill boring forms instantly using AI.
       </div>
 
       <div className="popup-instructions">

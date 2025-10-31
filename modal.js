@@ -97,7 +97,7 @@
     </div>
 
     <div class="flex flex-col gap-2">
-      <button id="choice-file" class="mf-button mf-secondary-button w-full">File</button>
+      <button id="choice-image" class="mf-button mf-secondary-button w-full">Image</button>
       <button id="choice-camera" class="mf-button mf-secondary-button w-full">Camera</button>
     </div>
   </div>
@@ -706,7 +706,7 @@
     }
   }
 
-  async function handleFileChoice() {
+  async function handleImageChoice() {
     const input = document.createElement("input")
     input.type = "file"
     input.multiple = true
@@ -848,8 +848,8 @@
       ?.addEventListener("click", removeOverlay)
 
     // --- Handlers ---
-    overlay.querySelector("#choice-file").addEventListener("click", () => {
-      handleFileChoice()
+    overlay.querySelector("#choice-image").addEventListener("click", () => {
+      handleImageChoice()
       removeOverlay()
     })
 
