@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Data Entry</title>
+    <style>
+        /* --- Minimal Styling for Clarity --- */
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h1 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #333;
+        }
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+        .form-group .optional-text {
+            font-weight: normal;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .submit-button {
+            width: 100%;
+            padding: 12px;
+            background-color: #17a2b8; /* Blue-green for travel/air */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.2s;
+        }
+        .submit-button:hover {
+            background-color: #138496;
+        }
+        hr {
+            border: 0; 
+            border-top: 1px dashed #ddd; 
+            margin: 25px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flight Expense Details</h1>
+
+        <div class="form-group">
+            <label for="passengerFullName">Passenger Full Name *</label>
+            <input type="text" id="passengerFullName" name="passengerFullName" placeholder="Passenger Full Name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="flightNumber">Flight Number *</label>
+            <input type="text" id="flightNumber" name="flightNumber" placeholder="e.g., AB123" required>
+        </div>
+
+        <div class="two-columns">
+            <div class="form-group">
+                <label for="departureAirport">Departure Airport *</label>
+                <input type="text" id="departureAirport" name="departureAirport" placeholder="e.g., ABC" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="arrivalAirport">Arrival Airport *</label>
+                <input type="text" id="arrivalAirport" name="arrivalAirport" placeholder="e.g., XYZ" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="dateOfFlight">Date of Flight (DD/MM/YYYY) *</label>
+            <input type="text" id="dateOfFlight" name="dateOfFlight" placeholder="Date of travel" required>
+        </div>
+        
+        <hr>
+        
+        <div class="form-group">
+            <label for="pnrCode">PNR / Booking Code <span class="optional-text">(optional)</span></label>
+            <input type="text" id="pnrCode" name="pnrCode" placeholder="Booking reference">
+        </div>
+
+        <div class="form-group">
+            <label for="totalCost">Total Cost of Flight *</label>
+            <input type="text" id="totalCost" name="totalCost" placeholder="Must match ticket receipt" required>
+        </div>
+        
+        <button type="submit" class="submit-button">Save Flight Details</button>
+    </div>
+</body>
+</html>

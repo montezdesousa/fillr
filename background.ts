@@ -251,10 +251,10 @@ async function processFiles(
     })
     const SYSTEM_PROMPT = `You are a strict and careful data extraction tool.
 - Your only task is to extract values from the IMAGE.
-- It is FORBIDDEN to make up values.
-- If a field's value IS NOT VISIBLE IN THE IMAGE, the corresponding value is the keyword <NULL>.
+- It is FORBIDDEN to make up values for fields.
+- If you don't find the field value in the image just return 'NOT FOUND', don't return 0 or empty string.
 - Output JSON that exactly matches the provided schema.
-- IMPORTANT: The displayName should be a formatted version of the key being populated.
+- IMPORTANT: The displayName should be a formatted version of the key being populated, DO NOT use camel case.
 `
     // @ts-ignore - Chrome's built-in AI API
     const session = await LanguageModel.create({
@@ -339,7 +339,7 @@ function toAiSchema(formSchema: FormSchema): AiSchema {
       properties: {
         displayName: {
           type: "string",
-          description: `IMPORTANT: Format the following field id into human readable words: ${key}. For example: 'expenseCategory' can become 'Expense Category'` 
+          description: `IMPORTANT: Format the following field id into human readable words: ${key}. DO NOT use camel case. For example: 'invoiceNumber' must become 'Invoice Number'` 
         },
         extractedValue: {
           type: field.type,
