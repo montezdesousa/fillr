@@ -24,7 +24,7 @@
 `
 
   const MAIN_ICON_SVG = `
-<svg class="fillr-ai absolute w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>  
+<svg class="fillr-ai absolute w-8 h-8 z-20" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>
 `
 
   const PROCESSING_MODAL_HTML = `
@@ -33,6 +33,8 @@
     inline-flex flex-col items-start gap-3 w-96 p-5 
     bg-white text-gray-800 shadow-2xl shadow-gray-700/50 
     font-sans
+  "
+>
   <div class="flex items-center w-full gap-3">
     <div class="modal-primary-icon-placeholder relative w-8 h-8 flex items-center justify-center"></div>
     <div id="modal-primary-message" class="text-s truncate flex-grow min-w-0 font-medium text-gray-700"></div>        
