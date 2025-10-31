@@ -254,7 +254,7 @@ async function processFiles(
 - It is FORBIDDEN to make up values.
 - If a field's value IS NOT VISIBLE IN THE IMAGE, the corresponding value is the keyword <NULL>.
 - Output JSON that exactly matches the provided schema.
-- The displayName should be a formatted version of the key.
+- IMPORTANT: The displayName should be a formatted version of the key being populated.
 `
     // @ts-ignore - Chrome's built-in AI API
     const session = await LanguageModel.create({
