@@ -9,11 +9,13 @@ enum Action {
   CANCEL = "CANCEL",
   ERROR = "ERROR"
 }
+
+type AiType = "object" | "array" | "string" | "number" | "boolean"
 interface StartProcessingMessage {
   action: Action.START_PROCESSING
   content: {
     files: UserFile[]
-    form: Schema
+    form: FormSchema
   }
 }
 interface UpdateProgressMessage {
@@ -22,7 +24,7 @@ interface UpdateProgressMessage {
 }
 interface UpdateFieldStatusMessage {
   action: Action.UPDATE_FIELD_STATUS
-  content: { field: string; value: "object" | "array" | "string" | "number" | "boolean" }
+  content: { fieldId: string; fieldName: string; fieldValue: AiType }
 }
 interface DoneMessage {
   action: Action.DONE
@@ -48,16 +50,46 @@ interface UserFile {
   size: number // Size in bytes
   data: { [key: number]: number } // Chrome converts Uint8Array to an object when sending messages
 }
-interface Schema {
-  type: "object" | "array" | "string" | "number" | "boolean"
+interface FormSchema {
+  type: "object"
   properties: {
     [key: string]: {
-      type: "object" | "array" | "string" | "number" | "boolean"
+      type: AiType
       description?: string
     }
   }
   required: string[]
   additionalProperties: boolean
+}
+
+interface AiSchema {
+  type: "object"
+  properties: {
+    [key: string]: {
+      type: "object"
+      properties: {
+        displayName: {
+          type: "string"
+          description: string
+        }
+        extractedValue: {
+          type: AiType
+          description?: string
+        }
+      }
+      required: ["displayName", "extractedValue"]
+      additionalProperties: false
+    }
+  }
+  required: string[]
+  additionalProperties: false
+}
+
+interface AiFinalResult {
+  [fieldId: string]: {
+    name: string
+    value: AiType | null
+  }
 }
 
 // --- Create context menu ---
@@ -101,14 +133,14 @@ function sendMessage<Message>(port: chrome.runtime.Port, message: Message) {
 
 async function getFinalResult(
   stream: AsyncIterable<string | object>,
-  form: Schema,
+  aiSchema: AiSchema,
   port: chrome.runtime.Port
-) {
+): Promise<AiFinalResult> {
   let buffer = ""
-  const MAX_BUFFER = 8 * 1024 // keep last 8KB of stream to allow reassembly across chunks
-  const expectedFields = Object.keys(form.properties || {})
+  const MAX_BUFFER = 8 * 1024 // keep last 8KB for context
+  const expectedFields = Object.keys(aiSchema.properties || {})
   const reportedFields = new Map<string, boolean>()
-  let finalResult: { [k: string]: any } = {}
+  let finalResult: AiFinalResult = {}
 
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -116,75 +148,36 @@ async function getFinalResult(
     try {
       const text = typeof chunk === "string" ? chunk : JSON.stringify(chunk)
       buffer += text
-      // cap rolling buffer so it doesn't grow without bound but keeps recent context
       if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
+  
+      // --- check each field individually ---
+      for (const fieldId of expectedFields) {
+        const keyRe = new RegExp(`"${escapeRegex(fieldId)}"\\s*:\\s*({[^}]*})`, "i")
+        const match = buffer.match(keyRe)
+        if (match) {
+          try {
+            const fieldObj = JSON.parse(match[1])
+            console.log("[DEBUG]", fieldObj)
+            const displayName = fieldObj.displayName ?? ""
+            const extractedValue = fieldObj.extractedValue ?? null
 
-      // quick scan: look for key:value pairs for expected fields in the
-      for (const k of expectedFields) {
-        // strict key:value detection (string/null/number) — report as soon as present
-        const keyRe = new RegExp(
-          `(?:"${escapeRegex(k)}"|'${escapeRegex(k)}'|\\b${escapeRegex(k)}\\b)\\s*:\\s*(?:"([^"]*)"|'([^']*)'|(null)|(true|false)|(-?\\d+(?:\\.\\d+)?))`,
-          "i"
-        )
-        const m = buffer.match(keyRe)
-        if (m) {
-          let val: any = null
-          if (m[1] !== undefined) val = m[1]
-          else if (m[2] !== undefined) val = m[2]
-          else if (m[3] !== undefined) val = null
-          else if (m[4] !== undefined) val = m[4].toLowerCase() === "true"
-          else if (m[5] !== undefined) {
-            const num = Number(m[5])
-            val = Number.isFinite(num) ? num : m[5]
-          }
-          const hasValue = val !== null && val !== "" && val !== undefined
-          const prev = reportedFields.get(k)
-          if (hasValue && (prev === undefined || prev !== hasValue)) {
-            reportedFields.set(k, hasValue)
-            sendMessage<UpdateFieldStatusMessage>(port, {
-              action: Action.UPDATE_FIELD_STATUS,
-              content: { field: k, value: val }
-            })
-          }
-          finalResult[k] = val
-        }
-      }
+            finalResult[fieldId] = { name: displayName, value: extractedValue }
 
-      // fallback: try to extract a JSON substring from buffer
-      const first = buffer.indexOf("{")
-      const last = buffer.lastIndexOf("}")
-      if (first !== -1 && last !== -1 && last > first) {
-        const candidate = buffer.slice(first, last + 1)
-        try {
-          const parsed = JSON.parse(candidate)
-          // merge parsed into finalResult (shallow merge)
-          Object.keys(parsed).forEach((k) => {
-            const val = parsed[k]
-            // determine if field has a meaningful value
-            const hasValue = val !== null && val !== "" && val !== undefined
-            const prev = reportedFields.get(k)
-            // if field appears for the first time, report its state (true or false)
-            if (prev === undefined && hasValue) {
-              reportedFields.set(k, hasValue)
+            // send runtime update if not already reported
+            if (!reportedFields.has(fieldId)) {
+              reportedFields.set(fieldId, true)
               sendMessage<UpdateFieldStatusMessage>(port, {
                 action: Action.UPDATE_FIELD_STATUS,
-                content: { field: k, value: val }
-              })
-            } else if (!prev && hasValue) {
-              // previously reported as not found, now found -> update
-              reportedFields.set(k, true)
-              sendMessage<UpdateFieldStatusMessage>(port, {
-                action: Action.UPDATE_FIELD_STATUS,
-                content: { field: k, value: val }
+                content: { fieldId, fieldName: displayName, fieldValue: extractedValue }
               })
             }
-            finalResult[k] = val
-          })
-          // once parsed successfully, remove consumed portion but keep recent context
-          buffer = buffer.slice(last + 1)
-          if (buffer.length > MAX_BUFFER) buffer = buffer.slice(-MAX_BUFFER)
-        } catch (e) {
-          console.warn("⚠️ Could not parse JSON candidate:", e)
+
+            // remove matched part from buffer
+            const endIndex = buffer.indexOf(match[0]) + match[0].length
+            buffer = buffer.slice(endIndex)
+          } catch (err) {
+            console.warn(`⚠️ Could not parse field object for ${fieldId}:`, err)
+          }
         }
       }
     } catch (err) {
@@ -192,31 +185,26 @@ async function getFinalResult(
     }
   }
 
+  // final parse for remaining buffer (in case some fields weren't fully reported)
   try {
     const first = buffer.indexOf("{")
     const last = buffer.lastIndexOf("}")
     if (first !== -1 && last !== -1 && last > first) {
       const candidate = buffer.slice(first, last + 1)
       const parsed = JSON.parse(candidate)
-      Object.keys(parsed).forEach((k) => {
-        const val = parsed[k]
-        const hasValue = val !== null && val !== "" && val !== undefined
-        const prev = reportedFields.get(k)
-        if (prev === undefined && hasValue) {
-          reportedFields.set(k, hasValue)
+      for (const [fieldId, fieldObj] of Object.entries(parsed)) {
+        const displayName = (fieldObj as any).displayName
+        const extractedValue = (fieldObj as any).extractedValue
+        finalResult[fieldId] = { name: displayName, value: extractedValue }
+
+        if (!reportedFields.has(fieldId) && extractedValue !== null) {
+          reportedFields.set(fieldId, true)
           sendMessage<UpdateFieldStatusMessage>(port, {
             action: Action.UPDATE_FIELD_STATUS,
-            content: { field: k, value: val }
-          })
-        } else if (!prev && hasValue) {
-          reportedFields.set(k, true)
-          sendMessage<UpdateFieldStatusMessage>(port, {
-            action: Action.UPDATE_FIELD_STATUS,
-            content: { field: k, value: val }
+            content: { fieldId, fieldName: displayName, fieldValue: extractedValue }
           })
         }
-        finalResult[k] = val
-      })
+      }
     }
   } catch (err) {
     console.warn("⚠️ Could not parse final buffer:", err)
@@ -227,10 +215,14 @@ async function getFinalResult(
 
 async function processFiles(
   port: chrome.runtime.Port,
-  form: Schema,
+  form: FormSchema,
   userFiles: UserFile[]
 ) {
-  if (!Object.keys(form).length || userFiles.length === 0)
+  if (
+    !form?.properties ||
+    Object.keys(form.properties).length === 0 ||
+    userFiles.length === 0
+  )
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: "No form schema or files provided for processing."
@@ -239,7 +231,6 @@ async function processFiles(
   let onPortMsg: ((m: any) => void) | undefined = undefined
 
   try {
-    console.time("FILES processing time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: `Preparing ${userFiles.length} file(s) for AI processing...`
@@ -250,20 +241,21 @@ async function processFiles(
         return new File([uint8], f.name, { type: f.type })
       })
     )
-    console.timeEnd("FILES processing time")
+
+    const aiSchema = toAiSchema(form)
 
     // --- Call Chrome's built-in generative AI API ---
-    console.time("AI startup time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: "Starting AI model..."
     })
     const SYSTEM_PROMPT = `You are a strict and careful data extraction tool.
-    - Your only task is to extract values from the IMAGE.
-    - It is FORBIDDEN to make up values.
-    - If a field's value IS NOT VISIBLE IN THE IMAGE, the corresponding value MUST BE an empty string ("") or null.
-    - Be as literal as possible, but guarantee that the output matches the provided response constraint.
-    `
+- Your only task is to extract values from the IMAGE.
+- It is FORBIDDEN to make up values.
+- If a field's value IS NOT VISIBLE IN THE IMAGE, the corresponding value is the keyword <NULL>.
+- Output JSON that exactly matches the provided schema.
+- The displayName should be a formatted version of the key.
+`
     // @ts-ignore - Chrome's built-in AI API
     const session = await LanguageModel.create({
       systemPrompt: SYSTEM_PROMPT,
@@ -281,10 +273,8 @@ async function processFiles(
       ]
     }))
     await session.append(messages)
-    console.timeEnd("AI startup time")
-    
+
     // --- Process the response stream ---
-    console.time("AI processing time")
     sendMessage<UpdateProgressMessage>(port, {
       action: Action.UPDATE_PROGRESS_MESSAGE,
       content: "AI model is processing the files..."
@@ -304,20 +294,19 @@ async function processFiles(
       }
     }
     if (onPortMsg) port.onMessage.addListener(onPortMsg)
-
+    console.log("[DEBUG]", aiSchema)
     const stream = await session.promptStreaming(
       "Proceed with the extraction of information.",
       {
         signal: controller.signal,
-        responseConstraint: form
+        responseConstraint: aiSchema
       }
     )
-    const result = await getFinalResult(stream, form, port)
+    const result = await getFinalResult(stream, aiSchema, port)
     sendMessage<DoneMessage>(port, {
       action: Action.DONE,
       content: result
     })
-    console.timeEnd("AI processing time")
   } catch (err) {
     if (String(err) !== ABORT_MESSAGE) {
       console.log("❌ Error during AI processing:", err)
@@ -334,4 +323,33 @@ async function processFiles(
       console.warn("⚠️ Error removing onPortMsg listener:", e)
     }
   }
+}
+
+function toAiSchema(formSchema: FormSchema): AiSchema {
+  const aiSchema: AiSchema = {
+    type: "object",
+    properties: {},
+    required: formSchema.required || Object.keys(formSchema.properties),
+    additionalProperties: false
+  }
+
+  for (const [key, field] of Object.entries(formSchema.properties)) {
+    aiSchema.properties[key] = {
+      type: "object",
+      properties: {
+        displayName: {
+          type: "string",
+          description: `IMPORTANT: Format the following field id into human readable words: ${key}. For example: 'expenseCategory' can become 'Expense Category'` 
+        },
+        extractedValue: {
+          type: field.type,
+          description: `The value extracted from the image. Description ${field.description}`
+        }
+      },
+      required: ["displayName", "extractedValue"],
+      additionalProperties: false
+    }
+  }
+
+  return aiSchema
 }

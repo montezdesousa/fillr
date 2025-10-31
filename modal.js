@@ -42,13 +42,14 @@
     <div id="modal-primary-message" class="text-s truncate flex-grow min-w-0 font-medium text-gray-700"></div>        
   </div>
   <div id="modal-secondary-message" class="mt-2 ml-2 font-semibold text-xs text-gray-600"></div>  
-  <div id="fillr-fields-list" aria-hidden="false"
-    class="
-      w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
-      flex flex-col gap-y-2
-      fillr-list-container
-    "
-  ></div>
+  <div id="fillr-fields-list"
+     style="display: none;"
+     class="
+       w-full max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100 
+       flex flex-col gap-y-2
+       fillr-list-container
+     ">
+  </div>
   <div id="fillr-actions" class="mt-4 flex justify-end gap-3 w-full">
     <button
       id="fillr-btn-accept"
@@ -117,7 +118,7 @@
         console.log(`⚠️ Field not found in DOM: ${item}`)
         return
       }
-      const value = content[item]
+      const value = content[item].value
       if (value === undefined) {
         console.log(`⚠️ No content for field: ${item}`)
         return
@@ -142,9 +143,6 @@
     fields.forEach((field, index) => {
       const fieldKey = field.id || field.name
       if (fieldKey) {
-        let labelText = ""
-        const label = document.querySelector(`label[for="${field.id}"]`)
-        if (label) labelText = label.textContent.trim()
         let fieldType = "string"
         const inputType = field.type ? field.type.toLowerCase() : ""
         switch (inputType) {
@@ -161,7 +159,7 @@
         }
         schema.properties[fieldKey] = {
           type: fieldType,
-          description: `name: ${field.name}, description: ${field.ariaDescription}, label: ${labelText}, placeholder: ${field.ariaPlaceholder}`
+          description: "" // For now not including anything, but the surrounding HTML might be relevant to include
         }
       }
     })
@@ -350,18 +348,34 @@
       overlay.style.pointerEvents = "auto"
     }
 
-    // --- UPDATE MODAL ---
-    function update(message = "MagicFill: Loading...", fields = null) {
+    function updatePrimaryMessage(message = "MagicFill: Loading...") {
       createOverlay()
-
       const textEl = overlay.querySelector("#modal-primary-message")
       if (textEl) textEl.textContent = message
-
-      if (fields && Array.isArray(fields)) populateFields(fields)
-
       overlay.style.display = "flex"
       document.documentElement.style.pointerEvents = "none"
       overlay.style.pointerEvents = "auto"
+    }
+
+    function updateSecondaryMessage(message = "") {
+      createOverlay()
+      const textEl = overlay.querySelector("#modal-secondary-message")
+      if (textEl) textEl.textContent = message
+    }
+
+    function setFieldCounters(total, reported = 0) {
+      __mf_total = total
+      __mf_AiReportedCount = reported
+      updateSecondaryMessage(
+        `${__mf_AiReportedCount} / ${__mf_total} fields found`
+      )
+    }
+
+    function incrementReportedCount() {
+      __mf_AiReportedCount++
+      updateSecondaryMessage(
+        `${__mf_AiReportedCount} / ${__mf_total} fields found`
+      )
     }
 
     // --- CLOSE MODAL ---
@@ -420,11 +434,7 @@
         p.className = "text-xs text-gray-500 px-3 py-2"
         p.textContent = "No fields to display"
         fieldsListEl.appendChild(p)
-
-        overlay.__mf_total = 0
-        overlay.__mf_AiReportedCount = 0
-        const countEl = overlay.querySelector("#modal-secondary-message")
-        if (countEl) countEl.textContent = `0 / 0`
+        setFieldCounters(0)
         updateButtonState("RUNNING")
         return
       }
@@ -432,7 +442,7 @@
       fields.forEach((f) => {
         const li = document.createElement("div")
         li.className = "fillr-field-item flex items-center py-1"
-        li.setAttribute("data-field", f)
+        li.setAttribute("data-field-id", f)
         li.setAttribute("role", "listitem")
         li.innerHTML = `
           <div 
@@ -450,45 +460,79 @@
         li.dataset.reported = "false"
         fieldsListEl.appendChild(li)
       })
-
-      overlay.__mf_total = fields.length
-      overlay.__mf_AiReportedCount = 0
-
-      const countEl = overlay.querySelector("#modal-secondary-message")
-      if (countEl) countEl.textContent = `0 / ${fields.length}`
+      setFieldCounters(fields.length)
       updateButtonState("RUNNING")
     }
 
     // --- UPDATE SINGLE FIELD ---
-    function updateFieldFromAi(fieldName, fieldValue) {
+    function updateFieldFromAi(fieldId, fieldName, fieldValue) {
       if (!overlay) return
-      const li = overlay.querySelector(`[data-field="${cssEscape(fieldName)}"]`)
-      if (!li) return
+
+      const fieldsListEl = overlay.querySelector("#fillr-fields-list")
+      if (!fieldsListEl) return
+
+      let li = fieldsListEl.querySelector(`[data-field-id="${fieldId}"]`)
+
+      if (!li) {
+        li = document.createElement("div")
+        li.className = "fillr-field-item flex items-center py-1"
+        li.setAttribute("data-field-id", fieldId)
+        li.setAttribute("role", "listitem")
+        li.dataset.reported = "false"
+
+        li.innerHTML = `
+      <div 
+        class="w-3 h-3 rounded-full border border-gray-400 
+              flex items-center justify-center font-bold text-xs 
+              leading-none text-white shrink-0 mr-2 fillr-dot" 
+        aria-hidden="true"
+      ></div>
+      <div 
+        class="fillr-field-item-content text-xs truncate flex-grow min-w-0 -mt-px"
+      >
+        ${escapeHtml(fieldName)}
+      </div>
+    `
+        li.style.opacity = "0"
+        li.style.transition = "opacity 0.4s ease"
+        fieldsListEl.appendChild(li)
+        requestAnimationFrame(() => {
+          li.style.opacity = "1"
+        })
+      }
+
+      if (fieldsListEl.style.display === "none") {
+        fieldsListEl.style.opacity = "0"
+        fieldsListEl.style.display = "flex"
+        fieldsListEl.style.transition = "opacity 0.4s ease"
+        requestAnimationFrame(() => {
+          fieldsListEl.style.opacity = "1"
+        })
+      }
+
       const dot = li.querySelector(".fillr-dot")
       if (!dot) return
 
       dot.scrollIntoView({ block: "nearest", behavior: "smooth" })
-      const prevReported = li.dataset.reported === "true"
 
+      // Update dot color based on presence of value
       dot.classList.toggle("bg-blue-500", !!fieldValue)
       dot.classList.toggle("bg-red-500", !fieldValue)
 
+      // Update the content to show name and value
       const nameEl = li.querySelector(".fillr-field-item-content")
       if (nameEl) {
         nameEl.innerHTML = `
-          <span>${escapeHtml(fieldName)}</span>
-          <span class="ml-1 text-gray-600">${escapeHtml(fieldValue)}</span>
-        `
+      <span>${escapeHtml(fieldName)}</span>
+      <span class="ml-1 text-gray-600">${escapeHtml(fieldValue)}</span>
+    `
       }
 
-      if (!prevReported) {
+      // Mark as reported if it wasn't before
+      if (li.dataset.reported !== "true") {
         li.dataset.reported = "true"
-        overlay.__mf_AiReportedCount = (overlay.__mf_AiReportedCount || 0) + 1
+        incrementReportedCount()
       }
-
-      const countEl = overlay.querySelector("#modal-secondary-message")
-      if (countEl)
-        countEl.textContent = `${overlay.__mf_AiReportedCount} / ${overlay.__mf_total} found`
     }
 
     // --- BUTTON STATE ---
@@ -516,6 +560,12 @@
             retryBtn.textContent = "Retry"
             retryBtn.addEventListener("click", async () => {
               console.log("🔁 Retry clicked")
+              const fieldsListEl = overlay.querySelector("#fillr-fields-list")
+              if (fieldsListEl) {
+                fieldsListEl.innerHTML = ""
+                fieldsListEl.style.display = "none"
+              }
+              ProcessingModal.setFieldCounters(0)
               const lastFiles = overlay.__mf_lastFiles
               if (lastFiles) {
                 _showSpinner()
@@ -565,7 +615,8 @@
 
     return {
       open,
-      update,
+      updatePrimaryMessage,
+      setFieldCounters,
       close,
       populateFields,
       updateFieldFromAi,
@@ -604,14 +655,10 @@
   }
 
   async function processFiles(files) {
-    ProcessingModal.update("Processing files...")
+    ProcessingModal.updatePrimaryMessage("Processing files...")
     try {
       const form = getFormSchema()
-      // Show modal with fields list
-      ProcessingModal.update(
-        "Sending fields to background process...",
-        Object.keys(form.properties)
-      )
+      ProcessingModal.setFieldCounters(Object.keys(form.properties).length)
 
       // Connect to background port
       const port = chrome.runtime.connect({
@@ -624,24 +671,25 @@
 
         switch (msg.action) {
           case "UPDATE_PROGRESS_MESSAGE":
-            ProcessingModal.update(msg.content)
+            ProcessingModal.updatePrimaryMessage(msg.content)
             break
           case "UPDATE_FIELD_STATUS":
             ProcessingModal.updateFieldFromAi(
-              msg.content.field,
-              msg.content.value
+              msg.content.fieldId,
+              msg.content.fieldName,
+              msg.content.fieldValue
             )
             break
           case "ERROR":
             ProcessingModal.showErrorIcon()
             ProcessingModal.updateButtonState("ERROR")
-            ProcessingModal.update(msg.content)
+            ProcessingModal.updatePrimaryMessage(msg.content)
             break
           case "DONE":
             ProcessingModal.setFormData(form, msg.content)
             ProcessingModal.showMainIcon()
             ProcessingModal.updateButtonState("DONE")
-            ProcessingModal.update("AI model finished")
+            ProcessingModal.updatePrimaryMessage("AI model finished")
             break
         }
       })
@@ -654,7 +702,9 @@
       console.error("❌ Error processing files:", error)
       ProcessingModal.showErrorIcon()
       ProcessingModal.updateButtonState("ERROR")
-      ProcessingModal.update("An error occurred while processing.")
+      ProcessingModal.updatePrimaryMessage(
+        "An error occurred while processing."
+      )
     }
   }
 
