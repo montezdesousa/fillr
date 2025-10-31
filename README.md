@@ -31,3 +31,18 @@ This should create a production bundle for your extension, ready to be zipped an
 ## Submit to the webstores
 
 The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+
+## Test instructions
+
+1. Clone or download the project and open a terminal in the project folder.
+2. Install dependencies by running npm install.
+3. Start the development build with npm run dev.
+4. Open Chrome and go to chrome://extensions/.
+5. Enable Developer mode in the top-right corner.
+6. Click Load unpacked and select the folder ~/fillr/build/chrome-mv3-dev.
+7. Open one of the .html files in the folder /examples included in the project root in Chrome.
+8. Right-click anywhere on the demo form page to access the context menu and click 'Fill from...'
+9. Click 'Image' button and use the respective sample image provided the /examples directory.
+10. Fillr.ai will extract the values from the image and populate the form fields in real time.
+
+Note: this extension requires the multimodal features of prompt api to be enabled.
